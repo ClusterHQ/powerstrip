@@ -2,7 +2,7 @@ from twisted.internet import protocol, reactor
 
 class ServerProtocol(protocol.Protocol):
     def __init__(self, dockerAddr, dockerPort):
-        self.buffer = None
+        self.buffer = ""
         self.client = None
         self.dockerAddr = dockerAddr
         self.dockerPort = dockerPort
@@ -20,7 +20,7 @@ class ServerProtocol(protocol.Protocol):
         if self.client:
             self.client.write(data)
         else:
-            self.buffer = data
+            self.buffer += data
 
     # Proxy => Client
     def write(self, data):
