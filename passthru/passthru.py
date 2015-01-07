@@ -1,5 +1,5 @@
 from twisted.internet import protocol, reactor
-# Adapted from http://stackoverflow.com/a/15645169/221061
+
 class ServerProtocol(protocol.Protocol):
     def __init__(self, dockerAddr, dockerPort):
         self.buffer = None
@@ -17,7 +17,6 @@ class ServerProtocol(protocol.Protocol):
 
     # Client => Proxy
     def dataReceived(self, data):
-        print "s>", data
         if self.client:
             self.client.write(data)
         else:
@@ -25,26 +24,34 @@ class ServerProtocol(protocol.Protocol):
 
     # Proxy => Client
     def write(self, data):
-        print "s<", data
         self.transport.write(data)
 
 
+    def connectionLost(self, reason):
+        self.client.transport.loseConnection()
+
+
 class ClientProtocol(protocol.Protocol):
+
     def connectionMade(self):
         self.factory.server.client = self
-        self.write(self.factory.server.buffer)
-        self.factory.server.buffer = ''
+        if self.factory.server.buffer:
+            self.write(self.factory.server.buffer)
+            self.factory.server.buffer = ''
 
     # Server => Proxy
     def dataReceived(self, data):
-        print "c<", data
         self.factory.server.write(data)
 
     # Proxy => Server
     def write(self, data):
-        print "c>", data
         if data:
             self.transport.write(data)
+
+
+    def connectionLost(self, reason):
+        self.factory.server.transport.loseConnection()
+
 
 
 class ServerProtocolFactory(protocol.ServerFactory):
