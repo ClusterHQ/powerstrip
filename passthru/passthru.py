@@ -17,6 +17,7 @@ class ServerProtocol(protocol.Protocol):
 
     # Client => Proxy
     def dataReceived(self, data):
+        print "s>", data
         if self.client:
             self.client.write(data)
         else:
@@ -24,6 +25,7 @@ class ServerProtocol(protocol.Protocol):
 
     # Proxy => Client
     def write(self, data):
+        print "s<", data
         self.transport.write(data)
 
 
@@ -35,10 +37,12 @@ class ClientProtocol(protocol.Protocol):
 
     # Server => Proxy
     def dataReceived(self, data):
+        print "c<", data
         self.factory.server.write(data)
 
     # Proxy => Server
     def write(self, data):
+        print "c>", data
         if data:
             self.transport.write(data)
 
