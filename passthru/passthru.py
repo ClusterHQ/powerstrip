@@ -1,5 +1,8 @@
 from twisted.internet import protocol, reactor
+from zope.interface import implementer
+from twisted.internet.interfaces import IHalfCloseableProtocol
 
+@implementer(IHalfCloseableProtocol)
 class ServerProtocol(protocol.Protocol):
     def __init__(self, dockerAddr, dockerPort):
         self.buffer = ""
@@ -26,6 +29,8 @@ class ServerProtocol(protocol.Protocol):
     def write(self, data):
         self.transport.write(data)
 
+    def readConnectionLost(self):
+        self.client.transport.loseWriteConnection()
 
     def connectionLost(self, reason):
         self.client.transport.loseConnection()
