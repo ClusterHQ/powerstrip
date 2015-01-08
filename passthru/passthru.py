@@ -174,9 +174,9 @@ class DockerProxy(proxy.ReverseProxyResource):
 
 
 class HTTPServerProtocolFactory(server.Site):
-    def __init__(self, sitejuggler, *args, **kwargs):
-        self.root = DockerProxy()
-        server.Site.__init__(self, self.root, **kwargs)
+    def __init__(self, dockerAddr, dockerPort):
+        self.root = DockerProxy(dockerAddr, dockerPort)
+        server.Site.__init__(self, self.root)
 
 
 if USE_HTTP_PROXY:
