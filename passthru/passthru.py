@@ -136,7 +136,9 @@ class DockerProxyClient(proxy.ProxyClient):
     def handleResponseEnd(self):
         if self.log:
             channelLog("dockerapi/%d" % (id(self),), "response end!")
-        return proxy.ProxyClient.handleResponseEnd(self)
+        if self.http:
+            return proxy.ProxyClient.handleResponseEnd(self)
+        self.father.transport.loseConnection()
 
 
     def dataReceived(self, data):
@@ -149,7 +151,7 @@ class DockerProxyClient(proxy.ProxyClient):
     def rawDataReceived(self, data):
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
-        self.father.channel.transport.write(data)
+        self.father.transport.write(data)
 
 
 class DockerProxyClientFactory(proxy.ProxyClientFactory):
