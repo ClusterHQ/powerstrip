@@ -149,7 +149,7 @@ class DockerProxyClient(proxy.ProxyClient):
     framed = 0
     def rawDataReceived(self, data):
         if self.http:
-            return proxy.ProxyClient.dataReceived(self, data)
+            return proxy.ProxyClient.rawDataReceived(self, data)
 
         if self.framed < 2:
             framing = data[:2 - self.framed]
