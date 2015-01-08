@@ -98,11 +98,11 @@ class DockerProxyClient(proxy.ProxyClient):
         # and stream which works (without proxy) this was the only visible
         # difference in the TCP streams, except for "HTTP/1.0" vs "HTTP/1.1"...
         # so let's try changing one thing at a time.
-        del self.headers["connection"]
+        #del self.headers["connection"]
 
 
     def sendCommand(self, command, path):
-        self.transport.writeSequence([command, b' ', path, b' HTTP/1.1\r\n'])
+        self.transport.writeSequence([command, b' ', path, b' HTTP/1.0\r\n'])
 
 
     def connectionMade(self):
