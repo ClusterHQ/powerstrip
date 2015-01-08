@@ -81,8 +81,8 @@ class ServerProtocolFactory(protocol.ServerFactory):
 
 
 
-def channelLog(loc, val):
-    print val
+def channelLog(loc, *val):
+    print " ".join(val)
 
 
 class DockerProxyClient(proxy.ProxyClient):
