@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# usage is `sudo ./run.sh <n>` for run `<n>`. it needs docker bound to
+# localhost:2375 without TLS (add `-H localhost:2375` to `DOCKER_OPTS` in
+# `/etc/default/docker` on ubuntu)
+
 echo starting good...
 
 tcpdump -i lo -w outputs/good-${1}.pcap
