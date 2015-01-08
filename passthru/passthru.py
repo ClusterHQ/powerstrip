@@ -123,7 +123,7 @@ class DockerProxyClient(proxy.ProxyClient):
             channelLog("dockerapi/%d" % (id(self),), "handling header", key, value)
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
             self.http = False
-            self.setRawMode()
+            self.father.write("")
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
@@ -146,17 +146,10 @@ class DockerProxyClient(proxy.ProxyClient):
         return proxy.ProxyClient.dataReceived(self, data)
 
     http = True
-    framed = 0
     def rawDataReceived(self, data):
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
-
-        if self.framed < 2:
-            framing = data[:2 - self.framed]
-            data = data[2 - self.framed:]
-            self.framed += len(framing)
-        if data:
-            self.father.channel.transport.write(data)
+        self.father.channel.transport.write(data)
 
 
 class DockerProxyClientFactory(proxy.ProxyClientFactory):
