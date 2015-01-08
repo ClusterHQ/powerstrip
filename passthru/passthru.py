@@ -1,5 +1,5 @@
 from twisted.internet import protocol, reactor
-from zope.interface import implementer
+from zope.interface import implementer, directlyProvides
 from twisted.internet.interfaces import IHalfCloseableProtocol
 from twisted.web import server, proxy
 from twisted.protocols import basic
@@ -122,8 +122,13 @@ class DockerProxyClient(proxy.ProxyClient):
         if self.log:
             channelLog("dockerapi/%d" % (id(self),), "handling header", key, value)
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
+            self.father.transport.readConnectionLost = self.transport.loseWriteConnection
+            directlyProvides(self.father.transport, IHalfCloseableProtocol)
             self.http = False
-            self.father.write("")
+            self.father.transport.write(
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/vnd.docker.raw-stream\r\n"
+                "\r\n")
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
