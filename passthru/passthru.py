@@ -4,6 +4,7 @@ from twisted.internet.interfaces import IHalfCloseableProtocol
 from twisted.web import server, proxy
 from twisted.protocols import basic
 from urllib import quote as urlquote
+from twisted.python.log import msg
 
 _debug = []
 
@@ -82,7 +83,7 @@ class ServerProtocolFactory(protocol.ServerFactory):
 
 
 def channelLog(loc, *vals):
-    print " ".join(str(x) for x in vals)
+    msg(" ".join(str(x) for x in vals))
 
 
 class DockerProxyClient(proxy.ProxyClient):
