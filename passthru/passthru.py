@@ -4,6 +4,8 @@ from twisted.internet.interfaces import IHalfCloseableProtocol
 from twisted.web import server, proxy
 from urllib import quote as urlquote
 
+import resources
+
 class DockerProxyClient(proxy.ProxyClient):
     """
     An HTTP proxy which knows how to break HTTP just right so that Docker
@@ -41,7 +43,6 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
     protocol = DockerProxyClient
 
 
-
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
 
@@ -52,19 +53,16 @@ class DockerProxy(proxy.ReverseProxyResource):
 
 
     def getChild(self, path, request):
-        """
         fragments = path.split("/")
         print "got fragments:", fragments
         if fragments[1:2] == ["containers", "create"] and request.method == "POST":
-            return CreateContainerResource()
+            return resources.CreateContainerResource()
         elif fragments[1] == "containers" and request.method == "DELETE":
-            return DeleteContainerResource()
-        """
+            return resources.DeleteContainerResource()
         resource = DockerProxy(
             self.host, self.port, self.path + '/' + urlquote(path, safe=""),
             self.reactor)
         return resource
-
 
 
 class ServerProtocolFactory(server.Site):
