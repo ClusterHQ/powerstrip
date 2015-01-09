@@ -53,8 +53,7 @@ class DockerProxy(proxy.ReverseProxyResource):
 
 
     def getChild(self, path, request):
-        fragments = path.split("/")
-        print "got fragments:", fragments
+        fragments = request.uri.split("/")
         if len(fragments) > 2 and fragments[1:2] == ["containers", "create"] and request.method == "POST":
             return resources.CreateContainerResource()
         elif len(fragments) > 1 and fragments[1] == "containers" and request.method == "DELETE":
