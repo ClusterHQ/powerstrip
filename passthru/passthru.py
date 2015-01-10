@@ -16,7 +16,10 @@ class DockerProxyClient(proxy.ProxyClient):
 
     def handleHeader(self, key, value):
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
-            self.father.transport.readConnectionLost = self.transport.loseWriteConnection
+            def loseWriteConnectionReason(reason):
+                # discard the reason, for compatibility with readConnectionLost
+                self.transport.loseWriteConnection()
+            self.father.transport.readConnectionLost = loseWriteConnectionReason
             directlyProvides(self.father.transport, IHalfCloseableProtocol)
             self.http = False
             self.father.transport.write(
