@@ -58,10 +58,8 @@ class DockerProxy(proxy.ReverseProxyResource):
     def getChild(self, path, request):
         fragments = request.uri.split("/")
         fragments.pop(0)
-        print 'getchild being called with', self, path, request, len(fragments)
         proxyArgs = (self.host, self.port, self.path + '/' + urlquote(path, safe=""),
                      self.reactor)
-        print fragments, repr(request.method)
         if not request.postpath:
             # we are processing a leaf request
             if fragments[1:3] == ["containers", "create"] and request.method == "POST":
