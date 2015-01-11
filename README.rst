@@ -3,14 +3,20 @@ Powerstrip: The missing Docker extensions API
 
 .. image:: powerstrip.jpg
 
-Easily attach chained blocking webhooks to arbitrary Docker API calls.
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you easily attach chained blocking webhooks to arbitrary Docker API calls.
 
-Enables composition of prototypical `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
-Intended to allow quick prototyping of plugins, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
+This enables **composition** of prototypical `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
+This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-*A note on nomenclature:* we are calling Powerstrip plugins "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+*A note on nomenclature:* we are calling the things that plug into the powerstrip "plugins" because it works with the metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+
+
+Target audience
+---------------
+
+The target audience of this project is folks to want to write Docker extensions, not end users.
 
 
 Goal of project
@@ -22,10 +28,10 @@ It should eventually be possible to run a powerstrip-enabled Docker Swarm with F
 
     endpoints:
       # plugins are applied in order
-      "/*/containers/create":
+      "POST /*/containers/create":
         pre: [flocker, weave]
         post: [weave, flocker]
-      "/*/containers/*/attach":
+      "DELETE /*/containers/*":
         pre: [flocker, weave]
         post: [weave, flocker]
     plugins:
@@ -61,7 +67,7 @@ Try it out like this:
     $ docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
                -v ~/powerstrip-demo/plugins.yml:/etc/powerstrip/plugins.yml \
-               --link powerstrip-slowreq:slowreq
+               --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
                clusterhq/powerstrip
 
@@ -69,22 +75,33 @@ Try it out like this:
     $ export DOCKER_HOST=localhost:2375
     $ docker run ubuntu echo hello
 
+<video demo>
+
 
 Writing a plugin
 ----------------
 
-Pre-hook plugin endpoints receive POSTs like this:
+A plugin is just a REST API with a single endpoint.
+Use your favourite framework and language to write it.
+
+
+Pre-hook plugin endpoints receive POSTs like this
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
+This gives the plugin the opportunity to delay or modify the contents of the request.
 
 .. code:: http
 
-    POST /flocker-plugin HTTP/1.0
+    POST /plugin HTTP/1.1
     Content-type: application/json
     Content-length: ...
 
     {
-        method: "POST",
-        request: "/v1.16/container/create",
-        body: { ... },
+        Type: "pre-hook",
+        Method: "POST",
+        Request: "/v1.16/container/create",
+        Body: { ... },
     }
 
 And they respond with:
@@ -95,11 +112,67 @@ And they respond with:
     Content-type: application/json
 
     {
-        responsecode: 404,
-        body: { ... }
+        Request: "/v1.16/container/create",
+        Body: { ... }
     }
 
+So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
+
 Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
+
+Post-hook plugin endpoints receive POSTs like this
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Post-hooks get called after the response from Docker is complete but before it has been sent back to the user.
+Both the initial request and the Docker response are included in the POST body.
+
+Plugins thus get a chance to modify the response from Docker to the client.
+
+.. code::
+
+    POST /plugin HTTP/1.1
+
+    {
+        Type: "post-hook",
+        OriginalClientMethod: "POST",
+        OriginalClientRequest: "/v1.16/containers/create",
+        OriginalClientBody: { ... },
+        DockerResponseContentType: "text/plain",
+        DockerResponseBody: "not found",
+        DockerResponseCode: 404,
+    }
+
+Or, if it's a JSON response from Docker:
+
+.. code::
+
+    {
+        # ...
+        DockerResponseContentType: "application/json",
+        DockerResponseBody: { ... },
+        DockerResponseCode: 200,
+    }
+
+
+Chaining
+~~~~~~~~
+
+Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request body to the N+1'th in list order according to the YAML configuration.
+
+If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
+
+
+Limitations
+-----------
+
+* Powerstrip does not support adding hooks for:
+
+  * Content-encoding: chunked
+  * Content-type: application/vnd.docker.raw-stream
+
+  Such streams will be passed through unmodified to the Docker API.
+  This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it will not be possible to extend their functionality at this time.
 
 
 Recommended deployment
@@ -112,13 +185,14 @@ For now, it does not support TLS, but given that it should only be used for prot
 It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
 Plugins should listen on port 80.
 
-Then you can just specify the URL using e.g. http://flocker/ as below, assuming "flocker" is the link alias.
+Then you can just specify the URL using e.g. http://plugin/, assuming "plugin" is the link alias.
+(See example under "Try it out").
 
 
 Contributing
 ------------
 
-Plan to use CI from https://drone.io/ for unit tests.
+We plan to do CI with from https://drone.io/ for unit tests.
 Integration tests will exist but only get run manually for now.
 
 
@@ -151,12 +225,35 @@ Pseudocode:
             * a Failure object if the plugin was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API).
         """
 
-    plugins = [flocker, weave]
+    def sendErrorToClient():
+        pass
+
+    preHooks = [flocker, weave]
+    preHooks = [weave, flocker]
     def receive_req_from_client(method, request, body):
         d = defer.succeed(None)
-        for plugin in plugins:
-            d.addCallback(postToPlugin, flocker.uri, dict(method=method, request=request, body=body))
-        def sendErrorToClient():
-            pass
+        for plugin in preHooks:
+            # TODO probably actually implement this as a PreHookResponse object.
+            d.addCallback(postToPlugin, plugin.uri, dict(
+                Type="pre-hook",
+                Method=method,
+                Request=request,
+                Body=body))
+        d.addCallback(passthruToDocker, ...)
+        d.addErrback(sendErrorToClient)
+        def dockerErrorHandler(reason):
+            # post-hooks get to learn about errors from docker, these do not bail out the pipeline
+            return DockerErrorResponse(...)
+        d.addErrback(dockerErrorHandler)
+        for plugin in postHooks:
+            # TODO probably actually implement this as a PostHookResponse object.
+            d.addCallback(postToPlugin, plugin.uri, dict(
+                Type="post-hook",
+                OriginalClientMethod=method,
+                OriginalClientRequest=request,
+                OriginalClientBody=body,
+                DockerResponseContentType=...,
+                DockerResponseBody=...,
+                DockerResponseCode=...))
         d.addErrback(sendErrorToClient)
         return d
