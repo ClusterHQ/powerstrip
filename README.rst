@@ -13,14 +13,16 @@ Inspired by https://github.com/docker/docker/issues/6982
 Configuration
 -------------
 
-For example::
+For example:
+
+.. code:: yaml
 
     endpoints:
       # plugins are applied in order
-      "/*/containers/create":
+      "/\*/containers/create":
         pre: [flocker, weave]
         post: [weave, flocker]
-      "/*/containers/*/attach":
+      "/\*/containers/\*/attach":
         pre: [flocker, weave]
         post: [weave, flocker]
     plugins:
@@ -31,7 +33,9 @@ For example::
 Try it out
 ----------
 
-The following will start a powerstrip-enabled Docker Swarm with Flocker and Weave pre-loaded::
+The following will start a powerstrip-enabled Docker Swarm with Flocker and Weave pre-loaded:
+
+.. code:: sh
 
     git clone git@github.com:clusterhq/powerstrip
     cd powerstrip
@@ -42,7 +46,9 @@ The following will start a powerstrip-enabled Docker Swarm with Flocker and Weav
 Writing a plugin
 ----------------
 
-Pre-hook plugin endpoints receive POSTs like this::
+Pre-hook plugin endpoints receive POSTs like this:
+
+.. code:: http
 
     POST /flocker-plugin HTTP/1.0
     Content-type: application/json
@@ -54,7 +60,9 @@ Pre-hook plugin endpoints receive POSTs like this::
         body: { ... },
     }
 
-And they respond with::
+And they respond with:
+
+.. code:: http
 
     HTTP 200 OK
     Content-type: application/json
@@ -103,7 +111,9 @@ There are a few different paths that an HTTP request can take:
 * Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
 
 
-Pseudocode::
+Pseudocode:
+
+.. code:: python
 
     def postToPlugin(uri, jsonRequest):
         """
@@ -121,6 +131,3 @@ Pseudocode::
             pass
         d.addErrback(sendErrorToClient)
         return d
-
-
-    dockthru
