@@ -11,19 +11,20 @@ class InvalidRequest(Exception):
 
 class EndpointParser(object):
     """
-    Class to translate incoming requests into chains of plugins.
+    Translate incoming requests into chains of plugins.
     """
 
     def __init__(self, config):
         """
-        :param config: A ``PluginConfiguration`` object which has already read the current configuration.
+        :param config: A ``PluginConfiguration`` object which has already read
+        the current configuration.
         """
         self.config = config
 
     def match_endpoint(self, method, request):
         """
         Return a ``set`` of endpoint expressions which match the provided
-            ``method`` and ``request``. The items in this list can be provided
+            ``method`` and ``request``. The items in this set can be provided
             to ``PluginConfiguration.endpoint`` to get the plugin
             configuration.
 
