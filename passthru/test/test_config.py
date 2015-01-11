@@ -113,6 +113,13 @@ class PluginConfigurationTests(TestCase):
         del self.good_config['plugins']
         self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
 
+    def test_missing_defined_plugins(self):
+        """
+        If a plugin is referenced in an endpoint which does not exist, an ``InvalidConfiguration`` is raised.
+        """
+        del self.good_config['plugins']['flocker']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
     def test_endpoints(self):
         """
         ``endpoints`` returns a ``set`` of configured endpoint expressions.
@@ -164,6 +171,129 @@ class PluginConfigurationTests(TestCase):
         """
         self.config._parse_plugins(self.good_config)
         self.assertRaises(KeyError, self.config.plugin_uri, "bad_plugin")
+
+
+class ReadAndParseTests(TestCase):
+    """
+    Tests for ``PluginConfiguration.read_and_parse``.
+    """
+
+    def setUp(self):
+        self.config = PluginConfiguration()
+
+    def single_run(self):
+        """
+        Running for the first time successfully reads and parses the configuration.
+        """
+        yml = """endpoints:
+  # plugins are applied in order
+  "POST /*/containers/create":
+    pre: [flocker, weave]
+    post: [weave, flocker]
+  "DELETE /*/containers/*":
+    pre: [flocker, weave]
+    post: [weave, flocker]
+plugins:
+  flocker: http://flocker/flocker-plugin
+  weave: http://weave/weave-plugin"""
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(yml)
+        
+        self.config.read_and_parse()
+
+        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+                "POST /*/containers/create": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+                "DELETE /*/containers/*": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+            }, {
+                "flocker": "http://flocker/flocker-plugin",
+                "weave": "http://weave/weave-plugin",
+            }))
+
+    def no_config(self):
+        """
+        If the configuration file does not exist, ``NoConfiguration`` is raised.
+        """
+        self.config._default_file = "improbable_chickens"
+
+        self.assertRaises(NoConfiguration, self.config.read_and_parse)
+
+    def bad_config(self):
+        """
+        If the configuration file is bad, an ``InvalidConfiguration`` is raised.
+        """
+        yml = "this is garbage"
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(yml)
+        
+        self.assertRaises(NoConfiguration, self.config.read_and_parse)
+
+    def config_change(self):
+        """
+        If the config is changed, the new config is reflected.
+        """
+        yml = """endpoints:
+  # plugins are applied in order
+  "POST /*/containers/create":
+    pre: [flocker, weave]
+    post: [weave, flocker]
+  "DELETE /*/containers/*":
+    pre: [flocker, weave]
+    post: [weave, flocker]
+plugins:
+  flocker: http://flocker/flocker-plugin
+  weave: http://weave/weave-plugin"""
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(yml)
+        
+        self.config.read_and_parse()
+
+        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+                "POST /*/containers/create": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+                "DELETE /*/containers/*": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+            }, {
+                "flocker": "http://flocker/flocker-plugin",
+                "weave": "http://weave/weave-plugin",
+            }))
+
+        yml = """endpoints:
+  # plugins are applied in order
+  "POST /*/containers/stop":
+    pre: [flocker]
+plugins:
+  flocker: http://flocker/flocker-plugin"""
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(yml)
+        
+        self.config.read_and_parse()
+
+        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+                "POST /*/containers/stop": {
+                    "pre": ["flocker"],
+                    "pre": ["weave"],
+                },
+            }, {
+                "flocker": "http://flocker/flocker-plugin",
+            }))
 
 
 class EndppointConfigurationTests(TestCase):

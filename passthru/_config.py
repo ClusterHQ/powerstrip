@@ -48,6 +48,8 @@ class PluginConfiguration(object):
         """
         Read and parse the plugin configuration.
 
+        :raises: ``NoConfiguration`` if the configuration file was not found.
+
         :raises: ``InvalidConfiguration`` if the file was not valid configuration.
         """
         self.__init__() # reset all attributes
