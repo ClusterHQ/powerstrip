@@ -94,26 +94,35 @@ class PluginConfiguration(object):
 
     def endpoints(self):
         """
-        Return a ``list`` of endpoint expressions.
+        Return a ``set`` of endpoint expressions.
         """
+        return set(self._endpoints.keys())
 
     def endpoint(self, endpoint):
         """
         Return the plugin configuration for the endpoint expression returned by
         ``self.endpoints``. This is an ``EndppointConfiguration` object with attrbutes
         ``pre`` and ``post``. These attributes are lists of plugin names.
+
+        :raises: `KeyError` if the endpoint expression was not found.
         """
+        return self._endpoints[endpoint]
 
     def plugins(self):
         """
-        Return a ``list`` of known plugins.
+        Return a ``set`` of known plugins.
         """
+        return set(self._plugins.keys())
 
-    def plugin_uri(self):
+    def plugin_uri(self, plugin):
         """
         Return the URI for a plugin.
-        """
 
+        :param ``plugin``: The the desired plugin.
+
+        :raises: `KeyError` if the plugin was not found.
+        """
+        return self._plugins[plugin]
 
 class EndppointConfiguration(namedtuple("pre", "post")):
     """

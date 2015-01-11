@@ -110,3 +110,56 @@ class PluginConfigurationTests(TestCase):
         """
         del self.good_config['plugins']
         self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_endpoints(self):
+        """
+        ``endpoints`` returns a ``set`` of configured endpoint expressions.
+        """
+        self.config._parse_plugins(self.good_config)
+        endpoints = self.config.endpoints()
+        self.assertEquals(endpoints, set([
+            "POST /*/containers/create",
+            "DELETE /*/containers/*",
+        ]))
+
+    def test_endpoint(self):
+        """
+        ``endpoint`` returns the desired endpoint configuration.
+        """
+        self.config._parse_plugins(self.good_config)
+        endpoint_config = self.config.endpoint("POST /*/containers/create")
+        self.assertEquals(endpoint_config, {
+                "pre": ["flocker", "weave"],
+                "post": ["weave", "flocker"],
+            })
+
+    def test_endpoint_error(self):
+        """
+        ``endpoint`` raises ``KeyError`` if the endpoint expression does not
+        exist.
+        """
+        self.config._parse_plugins(self.good_config)
+        self.assertRaises(KeyError, self.config.endpoint, "POST /*/bogus/expression")
+
+    def test_plugins(self):
+        """
+        ``plugins`` returns a ``set`` of configured plugins.
+        """
+        self.config._parse_plugins(self.good_config)
+        plugins = self.config.plugins()
+        self.assertEquals(plugins, set(["flocker", "weave"]))
+
+    def test_plugin_uri(self):
+        """
+        ``plugin_uri`` returns the URI for a configured plugin.
+        """
+        self.config._parse_plugins(self.good_config)
+        uri = self.config.plugin_uri("flocker")
+        self.assertEquals(uri, "http://flocker/flocker-plugin")
+
+    def test_plugin_uri_error(self):
+        """
+        ``plugin_uri`` returns the URI for a configured plugin.
+        """
+        self.config._parse_plugins(self.good_config)
+        self.assertRaises(KeyError, self.config.plugin_uri, "bad_plugin")
