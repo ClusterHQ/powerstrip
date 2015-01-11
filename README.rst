@@ -129,7 +129,7 @@ And they respond with:
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
 
-Alternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the user.
+Alternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the client.
 
 Pre-hooks must not change the scope of which endpoint is being matched - rewriting the Request should only be used for modifying GET arguments (e.g. after a '?' in the URL).
 
@@ -137,7 +137,7 @@ Pre-hooks must not change the scope of which endpoint is being matched - rewriti
 Post-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Post-hooks get called after the response from Docker is complete but before it has been sent back to the user.
+Post-hooks get called after the response from Docker is complete but before it has been sent back to the client.
 Both the initial request and the Docker response are included in the POST body.
 
 Plugins thus get a chance to modify or delay the response from Docker to the client.
