@@ -6,6 +6,10 @@ Test the actual proxy implementation, given certain configurations.
 
 from twisted.trial.unittest import TestCase
 from twisted.internet import reactor, defer
+from twisted.web.client import Agent
+from treq.client import HTTPClient
+import json
+import treq
 
 from .. import testtools, passthru
 
@@ -26,6 +30,9 @@ class ProxyTests(TestCase):
                 dockerAddr="127.0.0.1", dockerPort=self.dockerPort)
         self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
+        
+        self.agent = Agent(reactor) # no connectionpool
+        self.client = HTTPClient(self.agent)
 
     def tearDown(self):
         return defer.gatherResults([
@@ -42,7 +49,20 @@ class ProxyTests(TestCase):
     def test_empty_endpoints(self):
         """
         The proxy passes through requests when no endpoints are specified.
+
+        In particular, when POST to the /towel endpoint on the *proxy*, we get
+        to see that we were seen by the (admittedly fake) Docker daemon.
         """
+        # TODO: specify an empty configuration
+        d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
+                      json.dumps({"hiding": "things"}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response,
+                    {"hiding": "things", "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
 
     def test_endpoint_and_empty_hooks(self):
         """
@@ -54,6 +74,8 @@ class ProxyTests(TestCase):
         """
         A plugin has a pre-hook which increments an integral field in the JSON
         POST body called "Number".
+
+        TODO: Assert that Docker saw it, as well as that it came out the end.
         """
 
     def test_adding_pre_hook_twice_plugin(self):

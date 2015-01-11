@@ -4,13 +4,13 @@
 Tests for the test tools.
 """
 
-from twisted.trial.unittest import TestCase
-from twisted.internet import reactor
-import treq
-from treq.client import HTTPClient
-import json
 from ..testtools import FakeDockerServer, AdderPlugin
+from treq.client import HTTPClient
+from twisted.internet import reactor
+from twisted.trial.unittest import TestCase
 from twisted.web.client import Agent
+import json
+import treq
 
 class TestFakeDockerServer(TestCase):
     def setUp(self):
