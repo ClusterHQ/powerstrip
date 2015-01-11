@@ -120,7 +120,6 @@ So that, for example, they can rewrite a GET request string, or modify the JSON 
 
 Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
 
-
 Post-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -135,9 +134,9 @@ Plugins thus get a chance to modify the response from Docker to the client.
 
     {
         Type: "post-hook",
-        ClientMethod: "POST",
-        OriginalRequest: "/v1.16/containers/create",
-        OriginalBody: { ... },
+        OriginalClientMethod: "POST",
+        OriginalClientRequest: "/v1.16/containers/create",
+        OriginalClientBody: { ... },
         DockerResponseContentType: "text/plain",
         DockerResponseBody: "not found",
         DockerResponseCode: 404,
@@ -153,6 +152,16 @@ Or, if it's a JSON response from Docker:
         DockerResponseBody: { ... },
         DockerResponseCode: 200,
     }
+
+
+Chaining
+~~~~~~~~
+
+Both pre- and post-hooks can be chained: the response from the ``N``th hook is passed in as the request body to the ``N+1``th in list order according to the YAML configuration.
+
+If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_.
+
 
 Limitations
 -----------
@@ -224,7 +233,12 @@ Pseudocode:
     def receive_req_from_client(method, request, body):
         d = defer.succeed(None)
         for plugin in preHooks:
-            d.addCallback(postToPlugin, plugin.uri, dict(method=method, request=request, body=body))
+            # TODO probably actually implement this as a PreHookResponse object.
+            d.addCallback(postToPlugin, plugin.uri, dict(
+                Type="pre-hook",
+                Method=method,
+                Request=request,
+                Body=body))
         d.addCallback(passthruToDocker, ...)
         d.addErrback(sendErrorToClient)
         def dockerErrorHandler(reason):
@@ -232,7 +246,14 @@ Pseudocode:
             return DockerErrorResponse(...)
         d.addErrback(dockerErrorHandler)
         for plugin in postHooks:
-            d.addCallback(postToPlugin, plugin.uri, dict(method=method, request=request, body=body))
-
+            # TODO probably actually implement this as a PostHookResponse object.
+            d.addCallback(postToPlugin, plugin.uri, dict(
+                Type="post-hook",
+                OriginalClientMethod=method,
+                OriginalClientRequest=request,
+                OriginalClientBody=body,
+                DockerResponseContentType=...,
+                DockerResponseBody=...,
+                DockerResponseCode=...))
         d.addErrback(sendErrorToClient)
         return d
