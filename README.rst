@@ -79,6 +79,9 @@ Try it out like this:
 Writing a plugin
 ----------------
 
+A plugin is just a REST API with a single endpoint.
+Use your favourite framework and language to write it.
+
 Pre-hook plugin endpoints receive POSTs like this:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -123,8 +126,8 @@ Limitations
 
 * Powerstrip does not support adding hooks for:
 
-  * chunked content-encoding
-  * application/vnd.docker.raw-stream content-type
+  * Content-encoding: chunked
+  * Content-type: application/vnd.docker.raw-stream
 
   Such streams will be passed through unmodified to the Docker API.
   This means that e.g. ``docker attach`` and ``docker pull`` will work, but it will not be possible to extend their functionality at this time.
