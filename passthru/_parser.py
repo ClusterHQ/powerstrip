@@ -41,6 +41,7 @@ class EndpointParser(object):
         all_endpoints = self.config.endpoints()
         match_str = "%s %s" % (method, request)
         matched_endpoints = set()
+        # Note: fnmatch.filter seemed to be broken when trying to do exaclty this.
         for endpoint in all_endpoints:
             if fnmatch.fnmatch(match_str, endpoint):
                 matched_endpoints.add(endpoint)
