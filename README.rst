@@ -6,11 +6,11 @@ Powerstrip: The missing Docker extensions API
 Easily attach chained blocking webhooks to arbitrary Docker API calls.
 
 Enables composition of prototypical `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
-Intended to allow quick prototyping of plugins, in order to figure out which integration points are needed to turn such prototypical extensions into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
+Intended to allow quick prototyping of plugins, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-A note on nomenclature: we are calling Powerstrip plugins "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+*A note on nomenclature:* we are calling Powerstrip plugins "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
 
 
 Goal of project
@@ -32,7 +32,7 @@ It should eventually be possible to run a powerstrip-enabled Docker Swarm with F
       flocker: http://flocker/flocker-plugin
       weave: http://flocker/weave-plugin
 
-This will allow moving stateful containers around while they keep their Weave IP.
+This will allow moving (rescheduling) stateful containers while they keep their Weave IP and their volumes intact.
 
 
 Try it out
@@ -60,7 +60,7 @@ Try it out like this:
                clusterhq/powerstrip-slowreq
     $ docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
-               -v ~/powerstrip-demo/powerstrip.yml:/etc/powerstrip/plugins.yml \
+               -v ~/powerstrip-demo/plugins.yml:/etc/powerstrip/plugins.yml \
                --link powerstrip-slowreq:slowreq
                -p 2375:2375 \
                clusterhq/powerstrip
@@ -98,6 +98,8 @@ And they respond with:
         responsecode: 404,
         body: { ... }
     }
+
+Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
 
 
 Recommended deployment
@@ -146,7 +148,7 @@ Pseudocode:
         """
         returns a Deferred which fires with either:
             * the responsecode and responsebody returned by the plugin.
-            * a Failure object if the plugin was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API.
+            * a Failure object if the plugin was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API).
         """
 
     plugins = [flocker, weave]
