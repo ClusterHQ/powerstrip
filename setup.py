@@ -34,6 +34,7 @@ setup(
     install_requires=[
         "Twisted == 14.0.0",
         "PyYAML == 3.10",
+        "treq == 0.2.1",
         ],
     # Some "trove classifiers" which are relevant.
     classifiers=[
