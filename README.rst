@@ -89,7 +89,7 @@ Pre-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
-This gives the plugin the opportunity to delay or modify the contents of the request.
+This gives the plugin the opportunity to modify or delay the request.
 
 .. code:: http
 
@@ -127,7 +127,7 @@ Post-hook plugin endpoints receive POSTs like this
 Post-hooks get called after the response from Docker is complete but before it has been sent back to the user.
 Both the initial request and the Docker response are included in the POST body.
 
-Plugins thus get a chance to modify the response from Docker to the client.
+Plugins thus get a chance to modify or delay the response from Docker to the client.
 
 .. code::
 
