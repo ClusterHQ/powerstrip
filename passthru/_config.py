@@ -94,6 +94,36 @@ class PluginConfiguration(object):
         except KeyError:
             raise InvalidConfiguration("Required key 'plugins' is missing.")
 
+        # Sanity check that all referenced plugins exist and that optional pre
+        # and post keys are added, with no unknown keys
+        known_plugins = self.plugins()
+        referenced_plugins = set()
+        for endpoint, config in self._endpoints.iteritems():
+            config_keys = set(config.keys())
+            if not config_keys:
+                raise InvalidConfiguration(
+                    "No configuration found for endpoint '%s'" % (endpoint,))
+
+            unknown_keys = config_keys - set(["pre", "post"])
+            if unknown_keys:
+                raise InvalidConfiguration(
+                    "Unkonwn keys found in endpoint configuration: %s" %
+                        (", ".join(unknown_keys)))
+
+            if "pre" not in config:
+                config['pre'] = []
+            if "post" not in config:
+                config['post'] = []
+
+            referenced_plugins.update(config['pre'])
+            referenced_plugins.update(config['post'])
+
+        unkown_plugins = referenced_plugins - known_plugins
+        if unkown_plugins:
+            raise InvalidConfiguration(
+                "Plugins were referenced in endpoint configuration but not "
+                "defined: %s" % (", ".join(unkown_plugins)))
+
     def endpoints(self):
         """
         Return a ``set`` of endpoint expressions.
