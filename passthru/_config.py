@@ -8,6 +8,11 @@ class NoConfiguration(Exception):
     The configuration file was not found.
     """
 
+    def __init__(self, path):
+        self.path = path
+        super(NoConfiguration, self).__init__(
+            b"The plugin configuration file '%s' was not found." % (self.path))
+
 
 class InvalidConfiguration(Exception):
     """
@@ -45,8 +50,10 @@ class PluginConfiguration(object):
        """
        Read the plugin config YAML file and return the YAML datastructure.
 
-       :param path: The path to the YAML file, or self._default_file if None.
+       :param path: A ``FilePath`` representing the path to the YAML file, or
+           self._default_file if None.
        """
+       return path.getContent()
 
     def _parse_plugins(self, datastructure):
         """
@@ -75,6 +82,7 @@ class PluginConfiguration(object):
         """
         Return the URI for a plugin.
         """
+
 
 class EndppointConfiguration(namedtuple("pre", "post")):
     """
