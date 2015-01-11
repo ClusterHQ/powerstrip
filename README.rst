@@ -129,7 +129,7 @@ And they respond with:
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
 
-ALternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the user.
+Alternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the user.
 
 Pre-hooks must not change the scope of which endpoint is being matched - rewriting the Request should only be used for modifying GET arguments (e.g. after a '?' in the URL).
 
