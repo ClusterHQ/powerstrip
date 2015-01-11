@@ -31,6 +31,17 @@ For example::
 * '*' in the endpoint definition means "any string can exist in this URL path segment".
 * Any arguments after a '?' get stripped when comparing endpoints.
 
+Try it out
+----------
+
+The following will start a powerstrip-enabled Docker Swarm with Flocker and Weave pre-loaded::
+
+    git clone git@github.com:clusterhq/powerstrip
+    cd powerstrip
+    vagrant up
+
+# XXX this doesn't work yet
+
 Writing a plugin
 ----------------
 
