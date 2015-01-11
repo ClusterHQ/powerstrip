@@ -229,7 +229,7 @@ Possible fates for a request
 
 There are a few different paths that an HTTP request can take.
 
-Here are a few of them:
+Here are some of them:
 
 * Client req => Plugin pre-hook returns OK => Docker => Plugin post-hook => Client response
 * Client req => Plugin pre-hook returns error code => error response to client (don't pass through request to Docker)
