@@ -112,7 +112,7 @@ And they respond with:
     Content-type: application/json
 
     {
-        Request: "/v1.16/container/create",
+        Request: "/v1.16/containers/create",
         Body: { ... }
     }
 
@@ -162,6 +162,21 @@ Both pre- and post-hooks can be chained: the response from the N'th hook is pass
 If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
 You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
 
+
+Defining Endpoints
+------------------
+
+Endpoints are defined using UNIX shell-like globbing.
+The request ``POST /v1.16/container/create`` would be matched by all of the following endpoint definitions:
+
+* ``POST /v1.16/containers/create``
+* ``POST /v1*/containers/create``
+* ``POST /*/containers/create``
+* ``POST /*/*/create``
+* ``* /*/containers/create``
+* ``POST /v[12]/containers/create``
+
+Note: Query arguments are stripped for matching purposes.
 
 Limitations
 -----------
