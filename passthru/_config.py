@@ -106,7 +106,7 @@ class PluginConfiguration(object):
 
         :raises: `KeyError` if the endpoint expression was not found.
         """
-        return self._endpoints[endpoint]
+        return EndppointConfiguration(**self._endpoints[endpoint])
 
     def plugins(self):
         """
@@ -124,7 +124,7 @@ class PluginConfiguration(object):
         """
         return self._plugins[plugin]
 
-class EndppointConfiguration(namedtuple("pre", "post")):
+class EndppointConfiguration(namedtuple("EndppointConfiguration", ["pre", "post"])):
     """
     A representation of the configured plugins for an endpoint.
 

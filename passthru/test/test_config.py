@@ -7,7 +7,9 @@ Tests for ``powerstrip._config``.
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 
-from .._config import PluginConfiguration, NoConfiguration, InvalidConfiguration
+from .._config import (
+        PluginConfiguration, NoConfiguration, InvalidConfiguration,
+        EndppointConfiguration)
 
 class PluginConfigurationTests(TestCase):
     """
@@ -128,10 +130,9 @@ class PluginConfigurationTests(TestCase):
         """
         self.config._parse_plugins(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
-        self.assertEquals(endpoint_config, {
-                "pre": ["flocker", "weave"],
-                "post": ["weave", "flocker"],
-            })
+        self.assertEquals(endpoint_config, EndppointConfiguration(
+                pre=["flocker", "weave"],
+                post=["weave", "flocker"]))
 
     def test_endpoint_error(self):
         """
@@ -163,3 +164,18 @@ class PluginConfigurationTests(TestCase):
         """
         self.config._parse_plugins(self.good_config)
         self.assertRaises(KeyError, self.config.plugin_uri, "bad_plugin")
+
+
+class EndppointConfigurationTests(TestCase):
+    """
+    Tests for ``EndppointConfiguration``.
+    """
+
+    def test_attributes(self):
+        """
+        The ``pre`` and ``post`` attributes are set correctly.
+        """
+
+        endpoint_config = EndppointConfiguration(pre="foo", post="bar")
+        self.assertEquals((endpoint_config.pre, endpoint_config.post),
+            ("foo", "bar"))
