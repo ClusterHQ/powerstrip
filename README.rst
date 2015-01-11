@@ -120,6 +120,7 @@ So that, for example, they can rewrite a GET request string, or modify the JSON 
 
 Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
 
+
 Post-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -153,14 +154,26 @@ Or, if it's a JSON response from Docker:
         DockerResponseCode: 200,
     }
 
+The plugin responds with:
+
+.. code::
+
+    {
+        ResponseContentType: "application/json",
+        ResponseBody: { ... },
+        ResponseCode: 200,
+    }
+
+This gives the post-hook a chance to convert a Docker error into a success if it thinks it can.
+
 
 Chaining
 ~~~~~~~~
 
-Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request body to the N+1'th in list order according to the YAML configuration.
+Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
-If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
+If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought plugin authors would like to know about Docker error messages.
 
 
 Limitations
