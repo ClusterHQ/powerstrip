@@ -20,8 +20,8 @@ class ProxyTests(TestCase):
 
     def test_addingPreHookPlugin(self):
         """
-        A plugin has a pre-hook which increments a field in the JSON POST body
-        called "Number".
+        A plugin has a pre-hook which increments an integral field in the JSON
+        POST body called "Number".
         """
 
     def test_addingPreHookTwicePlugin(self):
@@ -31,8 +31,8 @@ class ProxyTests(TestCase):
 
     def test_addingPostHookPlugin(self):
         """
-        A plugin has a post-hook which increments a field in the JSON POST body
-        called "Number".
+        A plugin has a post-hook which increments an integral field in the JSON
+        response body called "Number".
         """
     
     def test_addingPostHookTwicePlugin(self):
