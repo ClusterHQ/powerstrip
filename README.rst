@@ -1,7 +1,7 @@
 Powerstrip: The missing Docker extensions API
 =============================================
 
-.. image:: http://ecx.images-amazon.com/images/I/21ycl6FcpHL.jpg
+.. image:: powerstrip.jpg
 
 Easily attach chained blocking webhooks to arbitrary Docker API calls.
 
