@@ -90,3 +90,15 @@ class ProxyTests(TestCase):
         """
         An endpoint is matched when there are '*' characters in the string
         """
+
+    def test_stream_endpoint(self):
+        """
+        A streaming (aka hijacking) endpoint like /attach is rejected from
+        endpoints: a runtime error is raised when the Content-Type is detected.
+        """
+
+    def test_chunked_endpoint(self):
+        """
+        A chunking endpoint like /pull is rejected from endpoints: a runtime
+        error is raised when the Content-Encoding is detected.
+        """
