@@ -3,6 +3,10 @@
 
 from collections import namedtuple
 
+from twisted.python.filepath import FilePath
+from yaml import safe_load
+from yaml.error import YAMLError
+
 class NoConfiguration(Exception):
     """
     The configuration file was not found.
@@ -43,17 +47,34 @@ class PluginConfiguration(object):
     def read_and_parse(self):
         """
         Read and parse the plugin configuration.
+
+        :raises: ``InvalidConfiguration`` if the file was not valid configuration.
         """
         self.__init__() # reset all attributes
 
     def _read_from_yaml_file(self, path):
-       """
-       Read the plugin config YAML file and return the YAML datastructure.
+        """
+        Read the plugin config YAML file and return the YAML datastructure.
 
-       :param path: A ``FilePath`` representing the path to the YAML file, or
-           self._default_file if None.
-       """
-       return path.getContent()
+        :param path: A ``FilePath`` representing the path to the YAML file, or
+            self._default_file if None.
+
+        :raises: ``NoConfiguration`` if the plugin file was not found.
+
+        :raises: ``InvalidConfiguration`` if if the file was not valid YAML.
+        """
+        if path is None:
+            path = FilePath(self._default_file)
+        try:
+            content = path.getContent()
+        except IOError:
+            raise NoConfiguration(path.path)
+
+        try:
+            yaml = safe_load(content)
+            return yaml
+        except YAMLError:
+            raise InvalidConfiguration()
 
     def _parse_plugins(self, datastructure):
         """
