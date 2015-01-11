@@ -48,6 +48,8 @@ class PluginConfiguration(object):
         """
         Read and parse the plugin configuration.
 
+        :raises: ``NoConfiguration`` if the configuration file was not found.
+
         :raises: ``InvalidConfiguration`` if the file was not valid configuration.
         """
         self.__init__() # reset all attributes
@@ -80,32 +82,51 @@ class PluginConfiguration(object):
         """
         Take the decoded YAML configuration and store it as usable
         datastructures. See ``self.__init__``.
+
+        :raises: ``InvalidConfiguration`` if the configuration is invalid.
         """
+        try:
+            self._endpoints = datastructure["endpoints"]
+        except KeyError:
+            raise InvalidConfiguration("Required key 'endpoints' is missing.")
+        try:
+            self._plugins = datastructure["plugins"]
+        except KeyError:
+            raise InvalidConfiguration("Required key 'plugins' is missing.")
 
     def endpoints(self):
         """
-        Return a ``list`` of endpoint expressions.
+        Return a ``set`` of endpoint expressions.
         """
+        return set(self._endpoints.keys())
 
     def endpoint(self, endpoint):
         """
         Return the plugin configuration for the endpoint expression returned by
         ``self.endpoints``. This is an ``EndppointConfiguration` object with attrbutes
         ``pre`` and ``post``. These attributes are lists of plugin names.
+
+        :raises: `KeyError` if the endpoint expression was not found.
         """
+        return EndppointConfiguration(**self._endpoints[endpoint])
 
     def plugins(self):
         """
-        Return a ``list`` of known plugins.
+        Return a ``set`` of known plugins.
         """
+        return set(self._plugins.keys())
 
-    def plugin_uri(self):
+    def plugin_uri(self, plugin):
         """
         Return the URI for a plugin.
+
+        :param ``plugin``: The the desired plugin.
+
+        :raises: `KeyError` if the plugin was not found.
         """
+        return self._plugins[plugin]
 
-
-class EndppointConfiguration(namedtuple("pre", "post")):
+class EndppointConfiguration(namedtuple("EndppointConfiguration", ["pre", "post"])):
     """
     A representation of the configured plugins for an endpoint.
 
