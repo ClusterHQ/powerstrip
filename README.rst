@@ -35,8 +35,8 @@ It should eventually be possible to run a powerstrip-enabled Docker Swarm with F
 .. code:: yaml
 
     endpoints:
-      # plugins are applied in order
       "POST /*/containers/create":
+        # plugins are applied in list order
         pre: [flocker, weave]
         post: [weave, flocker]
       "DELETE /*/containers/*":
