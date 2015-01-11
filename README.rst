@@ -28,9 +28,6 @@ For example::
       weave: http://flocker/weave-plugin
 
 
-* '*' in the endpoint definition means "any string can exist in this URL path segment".
-* Any arguments after a '?' get stripped when comparing endpoints.
-
 Try it out
 ----------
 
@@ -40,7 +37,7 @@ The following will start a powerstrip-enabled Docker Swarm with Flocker and Weav
     cd powerstrip
     vagrant up
 
-# XXX this doesn't work yet
+    # XXX this doesn't work yet
 
 Writing a plugin
 ----------------
@@ -86,6 +83,13 @@ Contributing
 
 Plan to use CI from https://drone.io/ for unit tests.
 Integration tests will exist but only get run manually for now.
+
+
+Configuration in detail
+-----------------------
+
+* '*' in the endpoint definition means "any string can exist in this URL path segment".
+* Any arguments after a '?' get stripped when comparing endpoints.
 
 
 How it works
