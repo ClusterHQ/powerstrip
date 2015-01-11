@@ -18,10 +18,12 @@ class ProxyTests(TestCase):
 
         Pre- and post-hook API servers are provided by the individual tests.
         """
-        self.dockerAPI = testtools.FakeDockerDaemon()
+        self.dockerAPI = testtools.FakeDockerServer()
         self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
-        self.dockerPort = self.server.getHost().port
+        self.dockerPort = self.dockerServer.getHost().port
 
+    def tearDown(self):
+        return self.dockerServer.stopListening()
 
     def _get_proxy_instance(self, configuration):
         """
