@@ -85,8 +85,6 @@ Try it out like this:
     $ export DOCKER_HOST=localhost:2375
     $ docker run ubuntu echo hello
 
-<video demo>
-
 
 Writing a plugin
 ----------------
