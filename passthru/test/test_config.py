@@ -9,7 +9,7 @@ from twisted.python.filepath import FilePath
 
 from .._config import (
         PluginConfiguration, NoConfiguration, InvalidConfiguration,
-        EndppointConfiguration)
+        EndpointConfiguration)
 
 class PluginConfigurationTests(TestCase):
     """
@@ -113,7 +113,7 @@ class PluginConfigurationTests(TestCase):
         """
         self.config._parse_plugins(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
-        self.assertEquals(endpoint_config, EndppointConfiguration(
+        self.assertEquals(endpoint_config, EndpointConfiguration(
                 pre=["flocker", "weave"],
                 post=["weave", "flocker"]))
 
@@ -157,7 +157,7 @@ class ReadAndParseTests(TestCase):
     def setUp(self):
         self.config = PluginConfiguration()
 
-    def single_run(self):
+    def test_single_run(self):
         """
         Running for the first time successfully reads and parses the configuration.
         """
@@ -193,7 +193,7 @@ plugins:
                 "weave": "http://weave/weave-plugin",
             }))
 
-    def no_config(self):
+    def test_no_config(self):
         """
         If the configuration file does not exist, ``NoConfiguration`` is raised.
         """
@@ -201,7 +201,7 @@ plugins:
 
         self.assertRaises(NoConfiguration, self.config.read_and_parse)
 
-    def bad_config(self):
+    def test_bad_config(self):
         """
         If the configuration file is bad, an ``InvalidConfiguration`` is raised.
         """
@@ -211,9 +211,9 @@ plugins:
         fp = FilePath(tmp)
         fp.setContent(yml)
         
-        self.assertRaises(NoConfiguration, self.config.read_and_parse)
+        self.assertRaises(InvalidConfiguration, self.config.read_and_parse)
 
-    def config_change(self):
+    def test_config_change(self):
         """
         If the config is changed, the new config is reflected.
         """
@@ -265,7 +265,7 @@ plugins:
         self.assertEquals((self.config._endpoints, self.config._plugins), ({
                 "POST /*/containers/stop": {
                     "pre": ["flocker"],
-                    "pre": ["weave"],
+                    "post": [],
                 },
             }, {
                 "flocker": "http://flocker/flocker-plugin",
@@ -352,9 +352,9 @@ class ConfigurationValidationTests(TestCase):
         self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
 
 
-class EndppointConfigurationTests(TestCase):
+class EndpointConfigurationTests(TestCase):
     """
-    Tests for ``EndppointConfiguration``.
+    Tests for ``EndpointConfiguration``.
     """
 
     def test_attributes(self):
@@ -362,6 +362,6 @@ class EndppointConfigurationTests(TestCase):
         The ``pre`` and ``post`` attributes are set correctly.
         """
 
-        endpoint_config = EndppointConfiguration(pre="foo", post="bar")
+        endpoint_config = EndpointConfiguration(pre="foo", post="bar")
         self.assertEquals((endpoint_config.pre, endpoint_config.post),
             ("foo", "bar"))

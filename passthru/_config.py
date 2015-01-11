@@ -53,6 +53,8 @@ class PluginConfiguration(object):
         :raises: ``InvalidConfiguration`` if the file was not valid configuration.
         """
         self.__init__() # reset all attributes
+        config_struct = self._read_from_yaml_file(None)
+        self._parse_plugins(config_struct)
 
     def _read_from_yaml_file(self, path):
         """
@@ -89,6 +91,8 @@ class PluginConfiguration(object):
             self._endpoints = datastructure["endpoints"]
         except KeyError:
             raise InvalidConfiguration("Required key 'endpoints' is missing.")
+        except TypeError:
+            raise InvalidConfiguration("Could not parse plugins file.")
         try:
             self._plugins = datastructure["plugins"]
         except KeyError:
@@ -133,12 +137,12 @@ class PluginConfiguration(object):
     def endpoint(self, endpoint):
         """
         Return the plugin configuration for the endpoint expression returned by
-        ``self.endpoints``. This is an ``EndppointConfiguration` object with attrbutes
+        ``self.endpoints``. This is an ``EndpointConfiguration` object with attrbutes
         ``pre`` and ``post``. These attributes are lists of plugin names.
 
         :raises: `KeyError` if the endpoint expression was not found.
         """
-        return EndppointConfiguration(**self._endpoints[endpoint])
+        return EndpointConfiguration(**self._endpoints[endpoint])
 
     def plugins(self):
         """
@@ -156,7 +160,7 @@ class PluginConfiguration(object):
         """
         return self._plugins[plugin]
 
-class EndppointConfiguration(namedtuple("EndppointConfiguration", ["pre", "post"])):
+class EndpointConfiguration(namedtuple("EndpointConfiguration", ["pre", "post"])):
     """
     A representation of the configured plugins for an endpoint.
 
