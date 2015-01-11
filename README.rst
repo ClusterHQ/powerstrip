@@ -10,7 +10,13 @@ Intended to allow quick prototyping of plugins, in order to figure out which int
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-*A note on nomenclature:* we are calling Powerstrip plugins "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+*A note on nomenclature:* we are calling the things that plug into the powerstrip "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+
+
+Target audience
+---------------
+
+The target audience of this project is folks to want to write Docker extensions, not end users.
 
 
 Goal of project
@@ -74,14 +80,16 @@ Writing a plugin
 ----------------
 
 Pre-hook plugin endpoints receive POSTs like this:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: http
 
-    POST /flocker-plugin HTTP/1.0
+    POST /flocker-plugin HTTP/1.1
     Content-type: application/json
     Content-length: ...
 
     {
+        type: "pre-hook",
         method: "POST",
         request: "/v1.16/container/create",
         body: { ... },
@@ -101,6 +109,26 @@ And they respond with:
 
 Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
 
+Post-hook plugin endpoints receive POSTs like this:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code::
+
+    POST /flocker-plugin HTTP/1.1
+        type: "pre-hook",
+
+
+Limitations
+-----------
+
+* Powerstrip does not support adding hooks for:
+
+  * chunked content-encoding
+  * application/vnd.docker.raw-stream content-type
+
+  Such streams will be passed through unmodified to the Docker API.
+  This means that e.g. ``docker attach`` and ``docker pull`` will work, but it will not be possible to extend their functionality at this time.
+
 
 Recommended deployment
 ----------------------
@@ -112,7 +140,8 @@ For now, it does not support TLS, but given that it should only be used for prot
 It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
 Plugins should listen on port 80.
 
-Then you can just specify the URL using e.g. http://flocker/ as below, assuming "flocker" is the link alias.
+Then you can just specify the URL using e.g. http://flocker/, assuming "flocker" is the link alias.
+(See example under "Try it out").
 
 
 Contributing
