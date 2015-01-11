@@ -30,7 +30,7 @@ The target audience of this project is folks to want to write Docker extensions,
 Goal of project
 ---------------
 
-It should eventually be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
+It should eventually be possible to run a Powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
 
 .. code:: yaml
 
@@ -56,7 +56,7 @@ Try it out
 
 Powerstrip ships as a Docker image, and plugins can be any HTTP endpoint, including other linked Docker containers.
 
-`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial powerstrip plugin (container) which adds a 1 second delay to all create commands.
+`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip plugin (container) which adds a 1 second delay to all create commands.
 
 Try it out like this:
 
@@ -208,7 +208,7 @@ This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *w
 Recommended deployment
 ----------------------
 
-For now, it does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
+For now, Powerstrip does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
 
 It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
 Plugins should listen on port 80.
