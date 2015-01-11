@@ -5,8 +5,31 @@ Test the actual proxy implementation, given certain configurations.
 """
 
 from twisted.trial.unittest import TestCase
+from twisted.internet import reactor
+
+from .. import testtools
 
 class ProxyTests(TestCase):
+
+    def setUp(self):
+        """
+        Construct a fake "Docker daemon" (one which does much less than the
+        actual Docker daemon)
+
+        Pre- and post-hook API servers are provided by the individual tests.
+        """
+        self.dockerAPI = testtools.FakeDockerDaemon()
+        self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
+        self.dockerPort = self.server.getHost().port
+
+
+    def _getProxyInstance(self, configuration):
+        """
+        Given a yaml configuration (with placeholders for interpolation of
+        current runtime ports for the test), return an appropriately configured
+        proxy instance.
+        """
+
     def test_emptyEndpoints(self):
         """
         The proxy passes through requests when no endpoints are specified.
