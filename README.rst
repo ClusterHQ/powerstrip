@@ -196,13 +196,13 @@ Note: Query arguments are stripped for matching purposes.
 Limitations
 -----------
 
-* Powerstrip does not support adding hooks for:
+Powerstrip does not support adding hooks for:
 
-  * Content-encoding: chunked
-  * Content-type: application/vnd.docker.raw-stream
+* Content-encoding: chunked
+* Content-type: application/vnd.docker.raw-stream
 
-  Such streams will be passed through unmodified to the Docker API.
-  This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it will not be possible to extend their functionality at this time.
+Such streams will be passed through unmodified to the Docker API.
+This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it will not be possible to extend their functionality at this time.
 
 
 Recommended deployment
