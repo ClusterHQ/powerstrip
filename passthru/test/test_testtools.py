@@ -49,6 +49,9 @@ class TestAdderPlugin(TestCase):
         return self.adderServer.stopListening()
 
     def test_adder_explode(self):
+        """
+        The adder plugin blows up (sends an HTTP 500) when asked to.
+        """
         self._getAdder(explode=True)
         d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
                       json.dumps({}),
@@ -64,6 +67,10 @@ class TestAdderPlugin(TestCase):
         return d
 
     def test_adder_pre(self):
+        """
+        The adder pre-hook increments an integer according to the protocol
+        defined in the README.
+        """
         self._getAdder(pre=True)
         d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
                       json.dumps({
@@ -83,6 +90,10 @@ class TestAdderPlugin(TestCase):
         return d
 
     def test_adder_post(self):
+        """
+        The adder post-hook increments an integer according to the protocol
+        defined in the README.
+        """
         self._getAdder(post=True)
         d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
                       json.dumps({
