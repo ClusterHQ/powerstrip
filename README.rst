@@ -16,7 +16,7 @@ A note on nomenclature: we are calling Powerstrip plugins "plugins" because it w
 Goal of project
 ---------------
 
-For example, it should be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
+It should eventually be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
 
 .. code:: yaml
 
