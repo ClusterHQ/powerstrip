@@ -5,16 +5,16 @@ Test the actual proxy implementation, given certain configurations.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
-from .. import testtools
+from .. import testtools, passthru
 
 class ProxyTests(TestCase):
 
     def setUp(self):
         """
         Construct a fake "Docker daemon" (one which does much less than the
-        actual Docker daemon)
+        actual Docker daemon) and a Proxy instance.
 
         Pre- and post-hook API servers are provided by the individual tests.
         """
@@ -22,8 +22,15 @@ class ProxyTests(TestCase):
         self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
         self.dockerPort = self.dockerServer.getHost().port
 
+        self.proxyAPI = passthru.ServerProtocolFactory(
+                dockerAddr="127.0.0.1", dockerPort=self.dockerPort)
+        self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
+        self.proxyPort = self.proxyServer.getHost().port
+
     def tearDown(self):
-        return self.dockerServer.stopListening()
+        return defer.gatherResults([
+            self.dockerServer.stopListening(),
+            self.proxyServer.stopListening()])
 
     def _get_proxy_instance(self, configuration):
         """
