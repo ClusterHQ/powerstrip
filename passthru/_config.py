@@ -160,6 +160,7 @@ class PluginConfiguration(object):
         """
         return self._plugins[plugin]
 
+
 class EndpointConfiguration(namedtuple("EndpointConfiguration", ["pre", "post"])):
     """
     A representation of the configured plugins for an endpoint.
