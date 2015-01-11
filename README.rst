@@ -89,7 +89,7 @@ Pre-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
-This gives the plugin the opportunity to delay or modify the contents of the request.
+This gives the plugin the opportunity to modify or delay the request.
 
 .. code:: http
 
@@ -101,7 +101,7 @@ This gives the plugin the opportunity to delay or modify the contents of the req
         Type: "pre-hook",
         Method: "POST",
         Request: "/v1.16/container/create",
-        Body: { ... },
+        Body: { ... } or null
     }
 
 And they respond with:
@@ -112,13 +112,17 @@ And they respond with:
     Content-type: application/json
 
     {
-        Request: "/v1.16/containers/create",
-        Body: { ... }
+        Method: "POST",
+        Request: "/v1.16/container/create",
+        Body: { ... } or null,
     }
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
 
-Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
+ALternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the user.
+
+Pre-hooks must not change the scope of which endpoint is being matched - rewriting the Request should only be used for modifying GET arguments (e.g. after a '?' in the URL).
+
 
 Post-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -126,7 +130,7 @@ Post-hook plugin endpoints receive POSTs like this
 Post-hooks get called after the response from Docker is complete but before it has been sent back to the user.
 Both the initial request and the Docker response are included in the POST body.
 
-Plugins thus get a chance to modify the response from Docker to the client.
+Plugins thus get a chance to modify or delay the response from Docker to the client.
 
 .. code::
 
@@ -138,29 +142,32 @@ Plugins thus get a chance to modify the response from Docker to the client.
         OriginalClientRequest: "/v1.16/containers/create",
         OriginalClientBody: { ... },
         DockerResponseContentType: "text/plain",
-        DockerResponseBody: "not found",
+        DockerResponseBody: { ... } (if application/json)
+                            or "not found" (if text/plain)
+                            or null (if it was a GET request),
         DockerResponseCode: 404,
     }
 
-Or, if it's a JSON response from Docker:
+The plugin responds with:
 
 .. code::
 
     {
-        # ...
-        DockerResponseContentType: "application/json",
-        DockerResponseBody: { ... },
-        DockerResponseCode: 200,
+        ContentType: "application/json",
+        Body: { ... },
+        Code: 200,
     }
+
+This gives the post-hook a chance to convert a Docker error into a success if it thinks it can.
 
 
 Chaining
 ~~~~~~~~
 
-Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request body to the N+1'th in list order according to the YAML configuration.
+Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
-If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
+If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought plugin authors would like to know about Docker error messages.
 
 
 Defining Endpoints
@@ -192,8 +199,6 @@ Limitations
 
 Recommended deployment
 ----------------------
-
-Powerstrip runs in a container.
 
 For now, it does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
 
@@ -229,7 +234,8 @@ There are a few different paths that an HTTP request can take:
 * Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
 
 
-Pseudocode:
+Pseudocode
+----------
 
 .. code:: python
 
@@ -272,3 +278,20 @@ Pseudocode:
                 DockerResponseCode=...))
         d.addErrback(sendErrorToClient)
         return d
+
+
+Possible improvements
+=====================
+
+* A Continue response argument could be added to allow chain cancellation with a non-error response.
+
+License
+=======
+
+Copyright 2015 ClusterHQ, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and limitations under the License.

@@ -62,10 +62,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                      self.reactor)
         if not request.postpath:
             # we are processing a leaf request
-            if fragments[1:3] == ["containers", "create"] and request.method == "POST":
-                return resources.CreateContainerResource(*proxyArgs)
-            elif fragments[1] == "containers" and request.method == "DELETE":
-                return resources.DeleteContainerResource(*proxyArgs)
+            pass
         resource = DockerProxy(*proxyArgs)
         return resource
 
