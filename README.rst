@@ -46,7 +46,9 @@ It should eventually be possible to run a powerstrip-enabled Docker Swarm with F
       flocker: http://flocker/flocker-plugin
       weave: http://flocker/weave-plugin
 
-This will allow moving (rescheduling) stateful containers while they keep their Weave IP and their volumes intact.
+This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
+
+But Powerstrip could be used to modify any Docker behavior at all.
 
 
 Try it out
