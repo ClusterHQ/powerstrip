@@ -224,17 +224,12 @@ We plan to do CI with from https://drone.io/ for unit tests.
 Integration tests will exist but only get run manually for now.
 
 
-Configuration in detail
------------------------
+Possible fates for a request
+----------------------------
 
-* '*' in the endpoint definition means "any string can exist in this URL path segment".
-* Any arguments after a '?' get stripped when comparing endpoints.
+There are a few different paths that an HTTP request can take.
 
-
-How it works
-------------
-
-There are a few different paths that an HTTP request can take:
+Here are a few of them:
 
 * Client req => Plugin pre-hook returns OK => Docker => Plugin post-hook => Client response
 * Client req => Plugin pre-hook returns error code => error response to client (don't pass through request to Docker)
