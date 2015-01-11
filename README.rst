@@ -10,7 +10,7 @@ Intended to allow quick prototyping of plugins, in order to figure out which int
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-*A note on nomenclature:* we are calling the things that plug into the powerstrip "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
+*A note on nomenclature:* we are calling the things that plug into the powerstrip "plugins" because it works with the metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
 
 
 Target audience
