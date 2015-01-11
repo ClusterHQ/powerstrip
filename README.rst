@@ -3,7 +3,7 @@ Powerstrip: The missing Docker extensions API
 
 .. image:: powerstrip.jpg
 
-Powerstrip is a pluggable HTTP proxy for Docker which lets you easily attach chained blocking webhooks to arbitrary Docker API calls.
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you easily attach chained blocking webhooks to arbitrary Docker API calls.
 
 This enables **composition** of prototypical `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
 Intended to allow quick prototyping of plugins, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
