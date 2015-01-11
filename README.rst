@@ -10,8 +10,8 @@ Intended to allow quick prototyping of plugins, in order to figure out which int
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-Configuring powerstrip
-----------------------
+Configuration
+-------------
 
 For example::
 
