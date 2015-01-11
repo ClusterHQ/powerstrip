@@ -16,6 +16,23 @@ class PluginConfigurationTests(TestCase):
 
     def setUp(self):
         self.config = PluginConfiguration()
+        self.good_config = {
+            "endpoints": {
+                "POST /*/containers/create": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+                "DELETE /*/containers/*": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+            },
+            "plugins": {
+                "flocker": "http://flocker/flocker-plugin",
+                "weave": "http://weave/weave-plugin",
+            },
+        }
+
 
     def test_read_from_yaml_file_success(self):
         """
@@ -62,8 +79,9 @@ class PluginConfigurationTests(TestCase):
         ``_parse_plugins`` reads a valid datastructure and populates relevant
         attirbutes on the class.
         """
-        good_config = {
-            "endpoints": {
+        self.config._parse_plugins(self.good_config)
+
+        self.assertEquals((self.config._endpoints, self.config._plugins), ({
                 "POST /*/containers/create": {
                     "pre": ["flocker", "weave"],
                     "post": ["weave", "flocker"],
@@ -72,9 +90,23 @@ class PluginConfigurationTests(TestCase):
                     "pre": ["flocker", "weave"],
                     "post": ["weave", "flocker"],
                 },
-            },
-            "plugins": {
+            }, {
                 "flocker": "http://flocker/flocker-plugin",
                 "weave": "http://weave/weave-plugin",
-            },
-        }
+            }))
+
+    def test_parse_plugins_missing_endpoints(self):
+        """
+        ``_parse_plugins`` raises ``InvalidConfiguration` when the endpoints
+        key is missing.
+        """
+        del self.good_config['endpoints']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_parse_plugins_missing_plugins(self):
+        """
+        ``_parse_plugins`` raises ``InvalidConfiguration` when the plugins
+        key is missing.
+        """
+        del self.good_config['plugins']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)

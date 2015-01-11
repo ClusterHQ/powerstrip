@@ -80,7 +80,17 @@ class PluginConfiguration(object):
         """
         Take the decoded YAML configuration and store it as usable
         datastructures. See ``self.__init__``.
+
+        :raises: ``InvalidConfiguration`` if the configuration is invalid.
         """
+        try:
+            self._endpoints = datastructure["endpoints"]
+        except KeyError:
+            raise InvalidConfiguration("Required key 'endpoints' is missing.")
+        try:
+            self._plugins = datastructure["plugins"]
+        except KeyError:
+            raise InvalidConfiguration("Required key 'plugins' is missing.")
 
     def endpoints(self):
         """
