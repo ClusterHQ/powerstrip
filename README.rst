@@ -153,7 +153,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         DockerResponseBody: { ... } (if application/json)
                             or "not found" (if text/plain)
                             or null (if it was a GET request),
-        DockerResponseCode: 404,
+        DockerResponseCode: 404
     }
 
 The plugin responds with:
@@ -163,7 +163,7 @@ The plugin responds with:
     {
         ContentType: "application/json",
         Body: { ... },
-        Code: 200,
+        Code: 200
     }
 
 This gives the post-hook a chance to convert a Docker error into a success if it thinks it can.
