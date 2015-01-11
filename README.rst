@@ -19,10 +19,10 @@ For example:
 
     endpoints:
       # plugins are applied in order
-      "/\*/containers/create":
+      "/*/containers/create":
         pre: [flocker, weave]
         post: [weave, flocker]
-      "/\*/containers/\*/attach":
+      "/*/containers/*/attach":
         pre: [flocker, weave]
         post: [weave, flocker]
     plugins:
