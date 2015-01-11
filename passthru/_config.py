@@ -20,7 +20,7 @@ class PluginConfiguration(object):
     Read and parse a plugin configuration from a YAML file.
     """
 
-    _default_file = b"/etc/powerstrip/powerstrip.yml"
+    _default_file = b"/etc/powerstrip/plugins.yml"
 
     def __init__(self):
         """
