@@ -10,10 +10,13 @@ Intended to allow quick prototyping of plugins, in order to figure out which int
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-Configuration
--------------
+A note on nomenclature: we are calling Powerstrip plugins "plugins" because it works with the powerstrip metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
 
-For example:
+
+Goal of project
+---------------
+
+For example, it should be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
 
 .. code:: yaml
 
@@ -29,14 +32,6 @@ For example:
       flocker: http://flocker/flocker-plugin
       weave: http://flocker/weave-plugin
 
-
-Goal of project
----------------
-
-The project should enable spinning the following sort of extension composition:
-
-It should be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
-
 This will allow moving stateful containers around while they keep their Weave IP.
 
 
@@ -51,8 +46,8 @@ Try it out like this:
 
 .. code:: sh
 
-    $ mkdir ~/powerstrip-config
-    $ cat > ~/powerstrip-config/powerstrip.yml <<EOF
+    $ mkdir ~/powerstrip-demo
+    $ cat > ~/powerstrip-demo/plugins.yml <<EOF
     endpoints:
       "/*/containers/create":
         pre: [slowreq]
@@ -65,7 +60,7 @@ Try it out like this:
                clusterhq/powerstrip-slowreq
     $ docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
-               -v powerstrip-config:/etc/powerstrip \
+               -v ~/powerstrip-demo/powerstrip.yml:/etc/powerstrip/plugins.yml \
                --link powerstrip-slowreq:slowreq
                -p 2375:2375 \
                clusterhq/powerstrip
