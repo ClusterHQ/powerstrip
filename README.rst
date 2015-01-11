@@ -101,7 +101,7 @@ This gives the plugin the opportunity to modify or delay the request.
         Type: "pre-hook",
         Method: "POST",
         Request: "/v1.16/container/create",
-        Body: { ... },
+        Body: { ... } or null
     }
 
 And they respond with:
@@ -112,13 +112,16 @@ And they respond with:
     Content-type: application/json
 
     {
+        Method: "POST",
         Request: "/v1.16/container/create",
-        Body: { ... }
+        Body: { ... } or null,
     }
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
 
-Or they respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead returned straight back to the user.
+ALternatively, pre-hooks can respond with an HTTP error code, in which case the call is never passed through to the Docker daemon, and instead the error is returned straight back to the user.
+
+Pre-hooks must not change the scope of which endpoint is being matched - rewriting the Request should only be used for modifying GET arguments (e.g. after a '?' in the URL).
 
 
 Post-hook plugin endpoints receive POSTs like this
@@ -139,19 +142,8 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         OriginalClientRequest: "/v1.16/containers/create",
         OriginalClientBody: { ... },
         DockerResponseContentType: "text/plain",
-        DockerResponseBody: "not found",
+        DockerResponseBody: { ... } (if application/json), "not found" or null,
         DockerResponseCode: 404,
-    }
-
-Or, if it's a JSON response from Docker:
-
-.. code::
-
-    {
-        # ...
-        DockerResponseContentType: "application/json",
-        DockerResponseBody: { ... },
-        DockerResponseCode: 200,
     }
 
 The plugin responds with:
@@ -227,7 +219,8 @@ There are a few different paths that an HTTP request can take:
 * Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
 
 
-Pseudocode:
+Pseudocode
+----------
 
 .. code:: python
 
@@ -270,3 +263,20 @@ Pseudocode:
                 DockerResponseCode=...))
         d.addErrback(sendErrorToClient)
         return d
+
+
+Possible improvements
+=====================
+
+* A Continue response argument could be added to allow chain cancellation with a non-error response.
+
+License
+=======
+
+Copyright 2015 ClusterHQ, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and limitations under the License.
