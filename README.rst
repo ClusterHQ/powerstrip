@@ -124,7 +124,7 @@ And they respond with:
     {
         Method: "POST",
         Request: "/v1.16/container/create",
-        Body: { ... } or null,
+        Body: { ... } or null
     }
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
