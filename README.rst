@@ -143,7 +143,7 @@ For now, it does not support TLS, but given that it should only be used for prot
 It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
 Plugins should listen on port 80.
 
-Then you can just specify the URL using e.g. http://flocker/, assuming "flocker" is the link alias.
+Then you can just specify the URL using e.g. http://plugin/, assuming "plugin" is the link alias.
 (See example under "Try it out").
 
 
