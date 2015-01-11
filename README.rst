@@ -54,9 +54,9 @@ But Powerstrip can be used to modify any Docker behavior at all.
 Try it out
 ----------
 
-Powerstrip ships as a Docker image.
+Powerstrip ships as a Docker image, and plugins can be any HTTP endpoint, including other linked Docker containers.
 
-`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial powerstrip plugin which adds a 1 second delay to all create commands.
+`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial powerstrip plugin (container) which adds a 1 second delay to all create commands.
 
 Try it out like this:
 
