@@ -58,7 +58,7 @@ Try it out like this:
         pre: [slowreq]
     plugins:
       slowreq: http://slowreq/v1/extension
-    ^D
+    EOF
 
     $ docker run -d --name powerstrip-slowreq \
                --expose 80 \
