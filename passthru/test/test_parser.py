@@ -4,8 +4,8 @@
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 
-from .._config import PluginConfiguration, EndpointConfiguration
-from .._parser import EndpointParser
+from .._config import PluginConfiguration
+from .._parser import EndpointParser, InvalidRequest
 
 class EndpointParserTests(TestCase):
     """
@@ -35,6 +35,28 @@ plugins:
 
         self.parser = EndpointParser(self.config)
 
+    def test_exact(self):
+        """
+        An exact endpoint is matched.
+        """
+        endpoint = self.parser.match_endpoint("POST", "/v1.16/containers/create")
+        self.assertEquals(endpoint, set(["POST /v1.16/containers/create"]))
+
+    def test_matched(self):
+        """
+        Requests are expanded.
+        """
+        endpoint = self.parser.match_endpoint("GET", "/v2/images/alpha/json")
+        self.assertEquals(endpoint, set(["* /v*/images/*/json"]))
+
+    def test_multiple(self):
+        """
+        Multiple endpoints can be matched.
+        """
+        endpoint = self.parser.match_endpoint("GET", "/v1.16/images/*/json")
+        self.assertEquals(endpoint,
+                set(["GET /v1.16/images/*/json", "* /v*/images/*/json"]))
+
     def test_config_changed(self):
         """
         The parser responds with new endpoints after the config has changed.
@@ -55,3 +77,9 @@ plugins:
 
         endpoint = self.parser.match_endpoint("GET", "/info")
         self.assertEquals(endpoint, set(["GET /info"]))
+
+    def test_query_error(self):
+        """
+        The parser raises ```InvalidRequest`` if the request contains a query part.
+        """
+        self.assertRaises(InvalidRequest, self.parser.match_endpoint, "GET", "/foo?bar")

@@ -3,6 +3,12 @@
 
 import fnmatch
 
+class InvalidRequest(Exception):
+    """
+    The request was not valid.
+    """
+
+
 class EndpointParser(object):
     """
     Class to translate incoming requests into chains of plugins.
@@ -28,9 +34,14 @@ class EndpointParser(object):
         :return: The set of endpoint expressions to be provided to
             ``PluginConfiguration.endpoint``.
 
-        :raises: If the request containers a query part, an InvalidRequest is raised.
+        :raises: If the request containers a query part, an ``InvalidRequest`` is raised.
         """
-
+        if "?" in request:
+            raise InvalidRequest()
         all_endpoints = self.config.endpoints()
         match_str = "%s %s" % (method, request)
-        return set(fnmatch.filter(all_endpoints, match_str))
+        matched_endpoints = set()
+        for endpoint in all_endpoints:
+            if fnmatch.fnmatch(match_str, endpoint):
+                matched_endpoints.add(endpoint)
+        return matched_endpoints
