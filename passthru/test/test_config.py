@@ -9,7 +9,7 @@ from twisted.python.filepath import FilePath
 
 from .._config import (
         PluginConfiguration, NoConfiguration, InvalidConfiguration,
-        EndppointConfiguration)
+        EndpointConfiguration)
 
 class PluginConfigurationTests(TestCase):
     """
@@ -34,7 +34,6 @@ class PluginConfigurationTests(TestCase):
                 "weave": "http://weave/weave-plugin",
             },
         }
-
 
     def test_read_from_yaml_file_success(self):
         """
@@ -97,29 +96,6 @@ class PluginConfigurationTests(TestCase):
                 "weave": "http://weave/weave-plugin",
             }))
 
-    def test_parse_plugins_missing_endpoints(self):
-        """
-        ``_parse_plugins`` raises ``InvalidConfiguration` when the endpoints
-        key is missing.
-        """
-        del self.good_config['endpoints']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
-
-    def test_parse_plugins_missing_plugins(self):
-        """
-        ``_parse_plugins`` raises ``InvalidConfiguration` when the plugins
-        key is missing.
-        """
-        del self.good_config['plugins']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
-
-    def test_missing_defined_plugins(self):
-        """
-        If a plugin is referenced in an endpoint which does not exist, an ``InvalidConfiguration`` is raised.
-        """
-        del self.good_config['plugins']['flocker']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
-
     def test_endpoints(self):
         """
         ``endpoints`` returns a ``set`` of configured endpoint expressions.
@@ -137,7 +113,7 @@ class PluginConfigurationTests(TestCase):
         """
         self.config._parse_plugins(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
-        self.assertEquals(endpoint_config, EndppointConfiguration(
+        self.assertEquals(endpoint_config, EndpointConfiguration(
                 pre=["flocker", "weave"],
                 post=["weave", "flocker"]))
 
@@ -181,7 +157,7 @@ class ReadAndParseTests(TestCase):
     def setUp(self):
         self.config = PluginConfiguration()
 
-    def single_run(self):
+    def test_single_run(self):
         """
         Running for the first time successfully reads and parses the configuration.
         """
@@ -217,7 +193,7 @@ plugins:
                 "weave": "http://weave/weave-plugin",
             }))
 
-    def no_config(self):
+    def test_no_config(self):
         """
         If the configuration file does not exist, ``NoConfiguration`` is raised.
         """
@@ -225,7 +201,7 @@ plugins:
 
         self.assertRaises(NoConfiguration, self.config.read_and_parse)
 
-    def bad_config(self):
+    def test_bad_config(self):
         """
         If the configuration file is bad, an ``InvalidConfiguration`` is raised.
         """
@@ -235,9 +211,9 @@ plugins:
         fp = FilePath(tmp)
         fp.setContent(yml)
         
-        self.assertRaises(NoConfiguration, self.config.read_and_parse)
+        self.assertRaises(InvalidConfiguration, self.config.read_and_parse)
 
-    def config_change(self):
+    def test_config_change(self):
         """
         If the config is changed, the new config is reflected.
         """
@@ -289,16 +265,96 @@ plugins:
         self.assertEquals((self.config._endpoints, self.config._plugins), ({
                 "POST /*/containers/stop": {
                     "pre": ["flocker"],
-                    "pre": ["weave"],
+                    "post": [],
                 },
             }, {
                 "flocker": "http://flocker/flocker-plugin",
             }))
 
 
-class EndppointConfigurationTests(TestCase):
+class ConfigurationValidationTests(TestCase):
     """
-    Tests for ``EndppointConfiguration``.
+    Tests for validation in ``PluginConfiguration._parse_plugins``.
+    """
+
+    def setUp(self):
+        self.config = PluginConfiguration()
+        self.good_config = {
+            "endpoints": {
+                "POST /*/containers/create": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+                "DELETE /*/containers/*": {
+                    "pre": ["flocker", "weave"],
+                    "post": ["weave", "flocker"],
+                },
+            },
+            "plugins": {
+                "flocker": "http://flocker/flocker-plugin",
+                "weave": "http://weave/weave-plugin",
+            },
+        }
+
+    def test_missing_endpoints(self):
+        """
+        ``_parse_plugins`` raises ``InvalidConfiguration` when the endpoints
+        key is missing.
+        """
+        del self.good_config['endpoints']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_missing_plugins(self):
+        """
+        ``_parse_plugins`` raises ``InvalidConfiguration` when the plugins
+        key is missing.
+        """
+        del self.good_config['plugins']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_unkown_endpoint_keys(self):
+        """
+        Keys except "pre" and "post" are invalid in endpoints.
+        """
+        self.good_config['endpoints']['POST /*/containers/create']['bad_key'] = "value"
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_no_endpoint_keys(self):
+        """
+        One of "pre" or "post" is required in an endpoint configuration.
+        """
+        self.good_config['endpoints']['POST /*/containers/create'] = {}
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+    def test_optional_pre(self):
+        """
+        ``pre`` is an optional configuration key.
+        """
+        del self.good_config['endpoints']['POST /*/containers/create']['pre']
+        self.config._parse_plugins(self.good_config)
+        endpoint_config = self.config.endpoint("POST /*/containers/create")
+        self.assertEquals(endpoint_config.pre, [])
+        
+    def test_optional_post(self):
+        """
+        ``post`` is an optional configuration key.
+        """
+        del self.good_config['endpoints']['POST /*/containers/create']['post']
+        self.config._parse_plugins(self.good_config)
+        endpoint_config = self.config.endpoint("POST /*/containers/create")
+        self.assertEquals(endpoint_config.post, [])
+        
+    def test_missing_defined_plugins(self):
+        """
+        If a plugin is referenced in an endpoint which does not exist, an ``InvalidConfiguration`` is raised.
+        """
+        del self.good_config['plugins']['flocker']
+        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+
+
+class EndpointConfigurationTests(TestCase):
+    """
+    Tests for ``EndpointConfiguration``.
     """
 
     def test_attributes(self):
@@ -306,6 +362,6 @@ class EndppointConfigurationTests(TestCase):
         The ``pre`` and ``post`` attributes are set correctly.
         """
 
-        endpoint_config = EndppointConfiguration(pre="foo", post="bar")
+        endpoint_config = EndpointConfiguration(pre="foo", post="bar")
         self.assertEquals((endpoint_config.pre, endpoint_config.post),
             ("foo", "bar"))

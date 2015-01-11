@@ -53,6 +53,8 @@ class PluginConfiguration(object):
         :raises: ``InvalidConfiguration`` if the file was not valid configuration.
         """
         self.__init__() # reset all attributes
+        config_struct = self._read_from_yaml_file(None)
+        self._parse_plugins(config_struct)
 
     def _read_from_yaml_file(self, path):
         """
@@ -89,10 +91,42 @@ class PluginConfiguration(object):
             self._endpoints = datastructure["endpoints"]
         except KeyError:
             raise InvalidConfiguration("Required key 'endpoints' is missing.")
+        except TypeError:
+            raise InvalidConfiguration("Could not parse plugins file.")
         try:
             self._plugins = datastructure["plugins"]
         except KeyError:
             raise InvalidConfiguration("Required key 'plugins' is missing.")
+
+        # Sanity check that all referenced plugins exist and that optional pre
+        # and post keys are added, with no unknown keys
+        known_plugins = self.plugins()
+        referenced_plugins = set()
+        for endpoint, config in self._endpoints.iteritems():
+            config_keys = set(config.keys())
+            if not config_keys:
+                raise InvalidConfiguration(
+                    "No configuration found for endpoint '%s'" % (endpoint,))
+
+            unknown_keys = config_keys - set(["pre", "post"])
+            if unknown_keys:
+                raise InvalidConfiguration(
+                    "Unkonwn keys found in endpoint configuration: %s" %
+                        (", ".join(unknown_keys)))
+
+            if "pre" not in config:
+                config['pre'] = []
+            if "post" not in config:
+                config['post'] = []
+
+            referenced_plugins.update(config['pre'])
+            referenced_plugins.update(config['post'])
+
+        unkown_plugins = referenced_plugins - known_plugins
+        if unkown_plugins:
+            raise InvalidConfiguration(
+                "Plugins were referenced in endpoint configuration but not "
+                "defined: %s" % (", ".join(unkown_plugins)))
 
     def endpoints(self):
         """
@@ -103,12 +137,12 @@ class PluginConfiguration(object):
     def endpoint(self, endpoint):
         """
         Return the plugin configuration for the endpoint expression returned by
-        ``self.endpoints``. This is an ``EndppointConfiguration` object with attrbutes
+        ``self.endpoints``. This is an ``EndpointConfiguration` object with attrbutes
         ``pre`` and ``post``. These attributes are lists of plugin names.
 
         :raises: `KeyError` if the endpoint expression was not found.
         """
-        return EndppointConfiguration(**self._endpoints[endpoint])
+        return EndpointConfiguration(**self._endpoints[endpoint])
 
     def plugins(self):
         """
@@ -126,7 +160,8 @@ class PluginConfiguration(object):
         """
         return self._plugins[plugin]
 
-class EndppointConfiguration(namedtuple("EndppointConfiguration", ["pre", "post"])):
+
+class EndpointConfiguration(namedtuple("EndpointConfiguration", ["pre", "post"])):
     """
     A representation of the configured plugins for an endpoint.
 
