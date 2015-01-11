@@ -30,18 +30,50 @@ For example:
       weave: http://flocker/weave-plugin
 
 
+Goal of project
+---------------
+
+The project should enable spinning the following sort of extension composition:
+
+It should be possible to run a powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
+
+This will allow moving stateful containers around while they keep their Weave IP.
+
+
 Try it out
 ----------
 
-The following will start a powerstrip-enabled Docker Swarm with Flocker and Weave pre-loaded:
+Powerstrip ships as a Docker image.
+
+`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial powerstrip plugin which adds a 1 second delay to all create commands.
+
+Try it out like this:
 
 .. code:: sh
 
-    git clone git@github.com:clusterhq/powerstrip
-    cd powerstrip
-    vagrant up
+    $ mkdir ~/powerstrip-config
+    $ cat > ~/powerstrip-config/powerstrip.yml <<EOF
+    endpoints:
+      "/*/containers/create":
+        pre: [slowreq]
+    plugins:
+      slowreq: http://slowreq/v1/extension
+    ^D
 
-    # XXX this doesn't work yet
+    $ docker run -d --name powerstrip-slowreq \
+               --expose 80 \
+               clusterhq/powerstrip-slowreq
+    $ docker run -d --name powerstrip \
+               -v /var/run/docker.sock:/var/run/docker.sock \
+               -v powerstrip-config:/etc/powerstrip \
+               --link powerstrip-slowreq:slowreq
+               -p 2375:2375 \
+               clusterhq/powerstrip
+
+    # Note how the following command takes a second longer than normal.
+    $ export DOCKER_HOST=localhost:2375
+    $ docker run ubuntu echo hello
+
 
 Writing a plugin
 ----------------
