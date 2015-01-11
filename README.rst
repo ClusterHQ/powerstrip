@@ -160,7 +160,7 @@ Chaining
 Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request body to the N+1'th in list order according to the YAML configuration.
 
 If any pre-hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
 
 
 Limitations
