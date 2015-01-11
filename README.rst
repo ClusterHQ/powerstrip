@@ -185,8 +185,6 @@ Limitations
 Recommended deployment
 ----------------------
 
-Powerstrip runs in a container.
-
 For now, it does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
 
 It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
