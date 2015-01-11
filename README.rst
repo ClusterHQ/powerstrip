@@ -10,34 +10,10 @@ Intended to allow quick prototyping of plugins, in order to figure out which int
 
 Inspired by https://github.com/docker/docker/issues/6982
 
-Features
---------
+Configuring powerstrip
+----------------------
 
-Powerstrip runs in a container.
-
-For now, it does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
-
-
-Contributing
-------------
-
-Plan to use CI from https://drone.io/ for unit tests.
-Integration tests will exist but only get run manually for now.
-
-
-What is a plugin?
------------------
-
-It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
-Plugins should listen on port 80.
-
-Then you can just specify the URL using e.g. http://flocker/ as below, assuming "flocker" is the link alias.
-
-
-Defining plugins
-----------------
-
-Sample yaml::
+For example::
 
     endpoints:
       # plugins are applied in order
@@ -54,6 +30,9 @@ Sample yaml::
 
 * '*' in the endpoint definition means "any string can exist in this URL path segment".
 * Any arguments after a '?' get stripped when comparing endpoints.
+
+Writing a plugin
+----------------
 
 Pre-hook plugin endpoints receive POSTs like this::
 
@@ -78,18 +57,36 @@ And they respond with::
     }
 
 
-There are a few different paths that an HTTP request can take
--------------------------------------------------------------
+Recommended deployment
+----------------------
 
-Client req => Plugin pre-hook => Docker => Plugin post-hook => Client resp
+Powerstrip runs in a container.
 
-Client req => Plugin pre-hook => error response to client (don't pass through request to Docker)
+For now, it does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
 
-* This case is indicated with an HTTP error code from the pre-hook
+It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
+Plugins should listen on port 80.
 
-Client req => Plugin pre-hook => Docker => Error response to plugin post-hook => Error response to client
+Then you can just specify the URL using e.g. http://flocker/ as below, assuming "flocker" is the link alias.
 
-Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
+
+Contributing
+------------
+
+Plan to use CI from https://drone.io/ for unit tests.
+Integration tests will exist but only get run manually for now.
+
+
+How it works
+------------
+
+There are a few different paths that an HTTP request can take:
+
+* Client req => Plugin pre-hook returns OK => Docker => Plugin post-hook => Client response
+* Client req => Plugin pre-hook returns error code => error response to client (don't pass through request to Docker)
+* Client req => Plugin pre-hook => Docker => Error response from Docker to plugin post-hook => Pass through error response to client
+* Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
+
 
 Pseudocode::
 
