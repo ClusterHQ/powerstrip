@@ -6,6 +6,9 @@ from urllib import quote as urlquote
 
 import resources
 
+from ._config import PluginConfiguration
+from ._parser import EndpointParser
+
 class DockerProxyClient(proxy.ProxyClient):
     """
     An HTTP proxy which knows how to break HTTP just right so that Docker
@@ -49,9 +52,15 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
 
-    def __init__(self, dockerAddr, dockerPort, path='', reactor=reactor):
+    def __init__(self, dockerAddr, dockerPort, path='', reactor=reactor, config=None):
         # XXX requires Docker to be run with -H 0.0.0.0:2375, shortcut to avoid
         # making ReverseProxyResource cope with UNIX sockets.
+        if config is None:
+            # Try to get the configuration from the default place on the
+            # filesystem.
+            self.config = PluginConfiguration()
+        else:
+            self.config = config
         proxy.ReverseProxyResource.__init__(self, dockerAddr, dockerPort, path, reactor)
 
 
@@ -68,6 +77,6 @@ class DockerProxy(proxy.ReverseProxyResource):
 
 
 class ServerProtocolFactory(server.Site):
-    def __init__(self, dockerAddr, dockerPort):
-        self.root = DockerProxy(dockerAddr, dockerPort)
+    def __init__(self, dockerAddr, dockerPort, config=None):
+        self.root = DockerProxy(dockerAddr, dockerPort, config=config)
         server.Site.__init__(self, self.root)

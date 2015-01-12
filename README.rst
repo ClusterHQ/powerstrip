@@ -287,6 +287,7 @@ Possible improvements
 =====================
 
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
+* Verbose logging (to stdout) as an optional argument/yaml configuration flag, to help plugin authors debugging plugins.
 
 License
 =======

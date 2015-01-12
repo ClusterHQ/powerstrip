@@ -12,6 +12,10 @@ import json
 import treq
 
 from .. import testtools, powerstrip
+from .._config import PluginConfiguration
+from .._parser import EndpointParser
+from twisted.python.filepath import FilePath
+from ..testtools import AdderPlugin
 
 class ProxyTests(TestCase):
 
@@ -26,18 +30,16 @@ class ProxyTests(TestCase):
         self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
         self.dockerPort = self.dockerServer.getHost().port
 
-        self.proxyAPI = powerstrip.ServerProtocolFactory(
-                dockerAddr="127.0.0.1", dockerPort=self.dockerPort)
-        self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
-        self.proxyPort = self.proxyServer.getHost().port
-
         self.agent = Agent(reactor) # no connectionpool
         self.client = HTTPClient(self.agent)
 
     def tearDown(self):
-        return defer.gatherResults([
+        shutdowns = [
             self.dockerServer.stopListening(),
-            self.proxyServer.stopListening()])
+            self.proxyServer.stopListening()]
+        if hasattr(self, 'adderServer'):
+            shutdowns.append(self.adderServer.stopListening())
+        return defer.gatherResults(shutdowns)
 
     def _get_proxy_instance(self, configuration):
         """
@@ -46,6 +48,20 @@ class ProxyTests(TestCase):
         proxy instance.
         """
 
+    def _configure(self, config_yml):
+        self.config = PluginConfiguration()
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(config_yml)
+        self.config.read_and_parse()
+        self.parser = EndpointParser(self.config)
+        self.proxyAPI = powerstrip.ServerProtocolFactory(
+                dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
+                config=self.config)
+        self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
+        self.proxyPort = self.proxyServer.getHost().port
+
     def test_empty_endpoints(self):
         """
         The proxy passes through requests when no endpoints are specified.
@@ -53,7 +69,7 @@ class ProxyTests(TestCase):
         In particular, when POST to the /towel endpoint on the *proxy*, we get
         to see that we were seen by the (admittedly fake) Docker daemon.
         """
-        # TODO: specify an empty configuration
+        self._configure("endpoints: {}\nplugins: {}")
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"hiding": "things"}),
                       headers={'Content-Type': ['application/json']})
@@ -69,6 +85,26 @@ class ProxyTests(TestCase):
         An endpoint is specified, but no pre-or post hooks are added to it.
         Requests to the endpoint are proxied.
         """
+        endpoint = "/towel"
+        self._configure("""endpoints:
+  "POST %s":
+    pre: []
+    post: []
+plugins: {}""" % (endpoint,))
+        d = self.client.post('http://127.0.0.1:%d%s' % (self.proxyPort, endpoint),
+                      json.dumps({"hiding": "things"}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response,
+                    {"hiding": "things", "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
+
+    def _getAdder(self, *args, **kw):
+        self.adderAPI = AdderPlugin(*args, **kw)
+        self.adderServer = reactor.listenTCP(0, self.adderAPI)
+        self.adderPort = self.adderServer.getHost().port
 
     def test_adding_pre_hook_plugin(self):
         """
@@ -77,6 +113,24 @@ class ProxyTests(TestCase):
 
         TODO: Assert that Docker saw it, as well as that it came out the end.
         """
+        self._getAdder(pre=True)
+        endpoint = "/towel"
+        self._configure("""endpoints:
+  "POST %(endpoint)s":
+    pre: [adder]
+    post: []
+plugins:
+  adder: http://127.0.0.1:%(adderPort)d%(endpoint)s""" % (
+            dict(endpoint=endpoint, adderPort=self.adderPort)))
+        d = self.client.post('http://127.0.0.1:%d%s' % (self.proxyPort, endpoint),
+                      json.dumps({"Number": 1}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 2, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
 
     def test_adding_pre_hook_twice_plugin(self):
         """
@@ -86,7 +140,7 @@ class ProxyTests(TestCase):
     def test_adding_post_hook_plugin(self):
         """
         A plugin has a post-hook which increments an integral field in the JSON
-        response body called "Number".
+        (Docker) response body called "Number".
         """
 
     def test_adding_post_hook_twice_plugin(self):
@@ -110,6 +164,12 @@ class ProxyTests(TestCase):
         """
         An error in the post-hook stops the chain and returns the error to the
         user.
+        """
+
+    def test_docker_error_does_not_stop_posthooks(self):
+        """
+        If Docker returns an HTTP error code, the post-hooks are given a chance
+        to take a look at it/modify it.
         """
 
     def test_endpoint_GET_args(self):
