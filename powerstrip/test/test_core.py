@@ -165,13 +165,6 @@ plugins:
         d.addCallback(verify)
         return d
 
-    def test_second_pre_hook_gets_new_request_and_method(self):
-        """
-        Chaining pre-hooks: the next pre-hook gets the request and method from
-        the previous.
-        """
-    test_second_pre_hook_gets_new_request_and_method.skip = "not implemented yet"
-
     def test_adding_post_hook_plugin(self):
         """
         A plugin has a post-hook which increments an integral field in the JSON
@@ -212,6 +205,20 @@ plugins:
         to take a look at it/modify it.
         """
     test_docker_error_does_not_stop_posthooks.skip = "not implemented yet"
+
+    def test_second_pre_hook_gets_new_request_and_method(self):
+        """
+        Chaining pre-hooks: the next pre-hook gets the request and method from
+        the previous.
+        """
+    test_second_pre_hook_gets_new_request_and_method.skip = "not implemented yet"
+
+    def test_second_post_hook_gets_new_request_and_method(self):
+        """
+        Chaining post-hooks: the next post-hook gets the request and method from
+        the previous.
+        """
+    test_second_post_hook_gets_new_request_and_method.skip = "not implemented yet"
 
     def test_endpoint_GET_args(self):
         """
