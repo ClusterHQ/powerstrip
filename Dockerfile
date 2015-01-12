@@ -18,4 +18,4 @@ RUN         mkdir /app
 ADD         . /app
 
 WORKDIR     /app
-CMD         ["twistd", "-noy", "passthru.tac"]
+CMD         ["twistd", "-noy", "powerstrip.tac"]

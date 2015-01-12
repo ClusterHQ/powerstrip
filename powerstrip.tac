@@ -3,9 +3,9 @@ from twisted.application import service, internet
 #from twisted.protocols.policies import TrafficLoggingFactory
 from urlparse import urlparse
 
-from passthru.passthru import ServerProtocolFactory
+from powerstrip.powerstrip import ServerProtocolFactory
 
-application = service.Application("Docker API Passthru")
+application = service.Application("Powerstrip")
 
 DOCKER_HOST = os.environ.get('DOCKER_HOST')
 if "://" not in DOCKER_HOST:
