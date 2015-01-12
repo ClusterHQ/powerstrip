@@ -3,11 +3,11 @@ Powerstrip: The missing Docker extensions API
 
 .. image:: powerstrip.jpg
 
-Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extensions into the same Docker daemon.
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip plugins") into the same Docker daemon.
 
 So for example you can have a storage plugin coexist with a networking plugin, playing nice with your choice of orchestration framework.
 
-This enables **composition** of prototypical `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
+This enables **composition** of prototypes of `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
 
 This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 

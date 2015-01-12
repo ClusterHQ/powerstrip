@@ -30,7 +30,7 @@ class ProxyTests(TestCase):
                 dockerAddr="127.0.0.1", dockerPort=self.dockerPort)
         self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
-        
+
         self.agent = Agent(reactor) # no connectionpool
         self.client = HTTPClient(self.agent)
 
@@ -88,7 +88,7 @@ class ProxyTests(TestCase):
         A plugin has a post-hook which increments an integral field in the JSON
         response body called "Number".
         """
-    
+
     def test_adding_post_hook_twice_plugin(self):
         """
         Chaining post-hooks: adding twice means you get +2.
@@ -116,7 +116,7 @@ class ProxyTests(TestCase):
         """
         An endpoint is matched when the GET arguments change.
         """
-    
+
     def test_endpoint_globbing(self):
         """
         An endpoint is matched when there are '*' characters in the string
