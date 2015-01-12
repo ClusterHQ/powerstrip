@@ -41,17 +41,18 @@ class AdderPlugin(server.Site):
     The first powerstrip plugin: a pre-hook and post-hook implementation of a
     simple adder which can optionally blow up on demand.
     """
-    def __init__(self, pre=False, post=False, explode=False):
-        self.root = AdderRoot(pre, post, explode)
+    def __init__(self, pre=False, post=False, explode=False, incrementBy=1):
+        self.root = AdderRoot(pre, post, explode, incrementBy)
         server.Site.__init__(self, self.root)
 
 
 class AdderResource(resource.Resource):
     isLeaf = True
-    def __init__(self, pre, post, explode):
+    def __init__(self, pre, post, explode, incrementBy):
         self.pre = pre
         self.post = post
         self.explode = explode
+        self.incrementBy = incrementBy
         resource.Resource.__init__(self)
 
 
@@ -85,7 +86,7 @@ class AdderResource(resource.Resource):
         assert "Method" in jsonParsed
         assert "Request" in jsonParsed
         assert "Body" in jsonParsed
-        jsonParsed["Body"]["Number"] += 1
+        jsonParsed["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         return json.dumps(dict(Method="POST",
                                Request="/something",
@@ -122,7 +123,7 @@ class AdderResource(resource.Resource):
         assert "OriginalClientRequest" in jsonParsed
         assert "OriginalClientBody" in jsonParsed
         assert "DockerResponseContentType" in jsonParsed
-        jsonParsed["DockerResponseBody"]["Number"] += 1
+        jsonParsed["DockerResponseBody"]["Number"] += self.incrementBy
         assert "DockerResponseCode" in jsonParsed
         request.setHeader("Content-Type", "application/json")
         return json.dumps(dict(ContentType="application/json",
@@ -158,9 +159,10 @@ class AdderResource(resource.Resource):
 
 class AdderRoot(resource.Resource):
     isLeaf = False
-    def __init__(self, pre, post, explode):
+    def __init__(self, pre, post, explode, incrementBy):
         self.pre = pre
         self.post = post
         self.explode = explode
+        self.incrementBy = incrementBy
         resource.Resource.__init__(self)
-        self.putChild("plugin", AdderResource(self.pre, self.post, self.explode))
+        self.putChild("plugin", AdderResource(self.pre, self.post, self.explode, self.incrementBy))

@@ -39,6 +39,8 @@ class ProxyTests(TestCase):
             self.proxyServer.stopListening()]
         if hasattr(self, 'adderServer'):
             shutdowns.append(self.adderServer.stopListening())
+        if hasattr(self, 'adderTwoServer'):
+            shutdowns.append(self.adderTwoServer.stopListening())
         return defer.gatherResults(shutdowns)
 
     def _get_proxy_instance(self, configuration):
@@ -92,8 +94,8 @@ class ProxyTests(TestCase):
     post: []
 plugins: {}""" % (endpoint,))
         d = self.client.post('http://127.0.0.1:%d%s' % (self.proxyPort, endpoint),
-                      json.dumps({"hiding": "things"}),
-                      headers={'Content-Type': ['application/json']})
+                             json.dumps({"hiding": "things"}),
+                             headers={'Content-Type': ['application/json']})
         d.addCallback(treq.json_content)
         def verify(response):
             self.assertEqual(response,
@@ -106,17 +108,24 @@ plugins: {}""" % (endpoint,))
         self.adderServer = reactor.listenTCP(0, self.adderAPI)
         self.adderPort = self.adderServer.getHost().port
 
+    def _getAdderTwo(self, *args, **kw):
+        kw["incrementBy"] = 2
+        self.adderTwoAPI = AdderPlugin(*args, **kw)
+        self.adderTwoServer = reactor.listenTCP(0, self.adderTwoAPI)
+        self.adderTwoPort = self.adderTwoServer.getHost().port
 
     def _preHookTest(self, config_yml):
         """
         Generalised version of a pre-hook test.
         """
         self._getAdder(pre=True)
+        self._getAdderTwo(pre=True)
         self.dockerEndpoint = "/towel"
         self.pluginEndpoint = "/plugin"
         self.args = dict(dockerEndpoint=self.dockerEndpoint,
-                    pluginEndpoint=self.pluginEndpoint,
-                    adderPort=self.adderPort)
+                         pluginEndpoint=self.pluginEndpoint,
+                         adderPort=self.adderPort,
+                         adderTwoPort=self.adderTwoPort)
         self._configure(config_yml % self.args)
         self.args["proxyPort"] = self.proxyPort
         d = self.client.post('http://127.0.0.1:%(proxyPort)d%(dockerEndpoint)s' % self.args,
@@ -127,7 +136,6 @@ plugins: {}""" % (endpoint,))
             return result
         d.addCallback(debug)
         return d
-
 
     def test_adding_pre_hook_plugin(self):
         """
@@ -159,6 +167,23 @@ plugins:
 plugins:
   adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
   adder2: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""")
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 3, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
+
+    def test_adding_one_then_two_pre_hook_plugin(self):
+        """
+        Chaining pre-hooks: adding +1 and then +2 gives you +3.
+        """
+        d = self._preHookTest("""endpoints:
+  "POST %(dockerEndpoint)s":
+    pre: [adder, adder2]
+    post: []
+plugins:
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
+  adder2: http://127.0.0.1:%(adderTwoPort)d%(pluginEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
                     {"Number": 3, "SeenByFakeDocker": 42})

@@ -102,12 +102,14 @@ class DockerProxy(proxy.ReverseProxyResource):
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
+            # XXX need to test with different hookURLs.
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing pre-hooks')
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
-            # mutate request in-place.
+            # mutate request in-place in such a way that ReverseProxyResource
+            # understands it.
             if result is not None:
                 request.content = StringIO.StringIO(json.dumps(result["Body"]))
             # TODO also handle Method and Request
