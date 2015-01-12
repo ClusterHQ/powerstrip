@@ -89,11 +89,16 @@ class DockerProxy(proxy.ReverseProxyResource):
             preHooks.extend(plugins.pre)
             postHooks.extend(plugins.post)
         def callPreHook(result, hookURL):
+            if result is None:
+                newRequestBody = originalRequestBody
+            else:
+                newRequestBody = result["Body"]
+            # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
                         "Type": "pre-hook",
                         "Method": request.method,
                         "Request": request.method,
-                        "Body": originalRequestBody,
+                        "Body": newRequestBody,
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
