@@ -114,12 +114,12 @@ plugins: {}""" % (endpoint,))
         self.adderTwoServer = reactor.listenTCP(0, self.adderTwoAPI)
         self.adderTwoPort = self.adderTwoServer.getHost().port
 
-    def _preHookTest(self, config_yml):
+    def _hookTest(self, config_yml, adderArgs=dict(pre=True)):
         """
         Generalised version of a pre-hook test.
         """
-        self._getAdder(pre=True)
-        self._getAdderTwo(pre=True)
+        self._getAdder(**adderArgs)
+        self._getAdderTwo(**adderArgs)
         self.dockerEndpoint = "/towel"
         self.pluginEndpoint = "/plugin"
         self.args = dict(dockerEndpoint=self.dockerEndpoint,
@@ -144,7 +144,7 @@ plugins: {}""" % (endpoint,))
 
         TODO: Assert that Docker saw it, as well as that it came out the end.
         """
-        d = self._preHookTest("""endpoints:
+        d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder]
     post: []
@@ -160,7 +160,7 @@ plugins:
         """
         Chaining pre-hooks: adding twice means you get +2.
         """
-        d = self._preHookTest("""endpoints:
+        d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder, adder2]
     post: []
@@ -177,7 +177,7 @@ plugins:
         """
         Chaining pre-hooks: adding +1 and then +2 gives you +3.
         """
-        d = self._preHookTest("""endpoints:
+        d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder, adder2]
     post: []
@@ -195,7 +195,17 @@ plugins:
         A plugin has a post-hook which increments an integral field in the JSON
         (Docker) response body called "Number".
         """
-    test_adding_post_hook_plugin.skip = "not implemented yet"
+        d = self._hookTest("""endpoints:
+  "POST %(dockerEndpoint)s":
+    pre: []
+    post: [adder]
+plugins:
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""", adderArgs=dict(post=True))
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 2, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
 
     def test_adding_post_hook_twice_plugin(self):
         """
