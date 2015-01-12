@@ -104,7 +104,8 @@ class DockerProxy(proxy.ReverseProxyResource):
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
             # mutate request in-place.
-            request.content = StringIO.StringIO(json.dumps(result["Body"]))
+            if result is not None:
+                request.content = StringIO.StringIO(json.dumps(result["Body"]))
             # TODO also handle Method and Request
             return proxy.ReverseProxyResource.render(self, request)
         d.addCallback(doneAllPrehooks)
