@@ -106,6 +106,29 @@ plugins: {}""" % (endpoint,))
         self.adderServer = reactor.listenTCP(0, self.adderAPI)
         self.adderPort = self.adderServer.getHost().port
 
+
+    def _preHookTest(self, config_yml):
+        """
+        Generalised version of a pre-hook test.
+        """
+        self._getAdder(pre=True)
+        self.dockerEndpoint = "/towel"
+        self.pluginEndpoint = "/plugin"
+        self.args = dict(dockerEndpoint=self.dockerEndpoint,
+                    pluginEndpoint=self.pluginEndpoint,
+                    adderPort=self.adderPort)
+        self._configure(config_yml % self.args)
+        self.args["proxyPort"] = self.proxyPort
+        d = self.client.post('http://127.0.0.1:%(proxyPort)d%(dockerEndpoint)s' % self.args,
+                      json.dumps({"Number": 1}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def debug(result, *args, **kw):
+            return result
+        d.addCallback(debug)
+        return d
+
+
     def test_adding_pre_hook_plugin(self):
         """
         A plugin has a pre-hook which increments an integral field in the JSON
@@ -113,26 +136,12 @@ plugins: {}""" % (endpoint,))
 
         TODO: Assert that Docker saw it, as well as that it came out the end.
         """
-        self._getAdder(pre=True)
-        dockerEndpoint = "/towel"
-        pluginEndpoint = "/plugin"
-        args = dict(dockerEndpoint=dockerEndpoint,
-                    pluginEndpoint=pluginEndpoint,
-                    adderPort=self.adderPort)
-        self._configure("""endpoints:
+        d = self._preHookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder]
     post: []
 plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""" % args)
-        args["proxyPort"] = self.proxyPort
-        d = self.client.post('http://127.0.0.1:%(proxyPort)d%(dockerEndpoint)s' % args,
-                      json.dumps({"Number": 1}),
-                      headers={'Content-Type': ['application/json']})
-        d.addCallback(treq.json_content)
-        def debug(result, *args, **kw):
-            return result
-        d.addCallback(debug)
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
                     {"Number": 2, "SeenByFakeDocker": 42})
@@ -143,7 +152,18 @@ plugins:
         """
         Chaining pre-hooks: adding twice means you get +2.
         """
-    test_adding_pre_hook_twice_plugin.skip = "not implemented yet"
+        d = self._preHookTest("""endpoints:
+  "POST %(dockerEndpoint)s":
+    pre: [adder, adder2]
+    post: []
+plugins:
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
+  adder2: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""")
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 3, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
 
     def test_second_pre_hook_gets_new_request_and_method(self):
         """
