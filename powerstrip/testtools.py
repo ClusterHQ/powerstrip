@@ -28,6 +28,7 @@ class FakeDockerResource(resource.Resource):
         Take a JSON POST body, add an attribute to it "SeenByFakeDocker", then pass
         it back as a response.
         """
+        print "rendering POST on fake Docker resource"
         jsonPayload = request.content.read()
         jsonParsed = json.loads(jsonPayload)
         if "SeenByFakeDocker" in jsonParsed:
@@ -128,7 +129,6 @@ class AdderResource(resource.Resource):
         return json.dumps(dict(ContentType="application/json",
                                Body=jsonParsed["DockerResponseBody"],
                                Code=200))
-
 
     def render_POST(self, request):
         """

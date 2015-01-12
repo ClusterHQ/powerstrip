@@ -114,18 +114,26 @@ plugins: {}""" % (endpoint,))
         TODO: Assert that Docker saw it, as well as that it came out the end.
         """
         self._getAdder(pre=True)
-        endpoint = "/towel"
+        dockerEndpoint = "/towel"
+        pluginEndpoint = "/plugin"
+        args = dict(dockerEndpoint=dockerEndpoint,
+                    pluginEndpoint=pluginEndpoint,
+                    adderPort=self.adderPort)
         self._configure("""endpoints:
-  "POST %(endpoint)s":
+  "POST %(dockerEndpoint)s":
     pre: [adder]
     post: []
 plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(endpoint)s""" % (
-            dict(endpoint=endpoint, adderPort=self.adderPort)))
-        d = self.client.post('http://127.0.0.1:%d%s' % (self.proxyPort, endpoint),
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""" % args)
+        args["proxyPort"] = self.proxyPort
+        d = self.client.post('http://127.0.0.1:%(proxyPort)d%(dockerEndpoint)s' % args,
                       json.dumps({"Number": 1}),
                       headers={'Content-Type': ['application/json']})
         d.addCallback(treq.json_content)
+        def debug(result, *args, **kw):
+            print "got result", result
+            return result
+        d.addCallback(debug)
         def verify(response):
             self.assertEqual(response,
                     {"Number": 2, "SeenByFakeDocker": 42})
@@ -136,60 +144,78 @@ plugins:
         """
         Chaining pre-hooks: adding twice means you get +2.
         """
+    test_adding_pre_hook_twice_plugin.skip = "not implemented yet"
+
+    def test_second_pre_hook_gets_new_request_and_method(self):
+        """
+        Chaining pre-hooks: the next pre-hook gets the request and method from
+        the previous.
+        """
+    test_second_pre_hook_gets_new_request_and_method.skip = "not implemented yet"
 
     def test_adding_post_hook_plugin(self):
         """
         A plugin has a post-hook which increments an integral field in the JSON
         (Docker) response body called "Number".
         """
+    test_adding_post_hook_plugin.skip = "not implemented yet"
 
     def test_adding_post_hook_twice_plugin(self):
         """
         Chaining post-hooks: adding twice means you get +2.
         """
+    test_adding_post_hook_twice_plugin.skip = "not implemented yet"
 
     def test_prehook_error_does_not_call_docker(self):
         """
         An error in the pre-hook does not call through to Docker and returns
         the error to the user.
         """
+    test_prehook_error_does_not_call_docker.skip = "not implemented yet"
 
     def test_prehook_error_stops_chain(self):
         """
         An error in the pre-hook stops the chain when there are multiple
         pre-hooks.
         """
+    test_prehook_error_stops_chain.skip = "not implemented yet"
 
     def test_posthook_error_stops_chain(self):
         """
         An error in the post-hook stops the chain and returns the error to the
         user.
         """
+    test_posthook_error_stops_chain.skip = "not implemented yet"
 
     def test_docker_error_does_not_stop_posthooks(self):
         """
         If Docker returns an HTTP error code, the post-hooks are given a chance
         to take a look at it/modify it.
         """
+    test_docker_error_does_not_stop_posthooks.skip = "not implemented yet"
 
     def test_endpoint_GET_args(self):
         """
         An endpoint is matched when the GET arguments change.
         """
+    test_endpoint_GET_args.skip = "not implemented yet"
 
     def test_endpoint_globbing(self):
         """
         An endpoint is matched when there are '*' characters in the string
         """
+    test_endpoint_globbing.skip = "not implemented yet"
 
     def test_stream_endpoint(self):
         """
         A streaming (aka hijacking) endpoint like /attach is rejected from
         endpoints: a runtime error is raised when the Content-Type is detected.
         """
+    test_stream_endpoint.skip = "not implemented yet"
 
     def test_chunked_endpoint(self):
         """
         A chunking endpoint like /pull is rejected from endpoints: a runtime
         error is raised when the Content-Encoding is detected.
         """
+    test_chunked_endpoint.skip = "not implemented yet"
