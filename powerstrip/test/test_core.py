@@ -131,7 +131,6 @@ plugins:
                       headers={'Content-Type': ['application/json']})
         d.addCallback(treq.json_content)
         def debug(result, *args, **kw):
-            print "got result", result
             return result
         d.addCallback(debug)
         def verify(response):

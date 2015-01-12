@@ -97,7 +97,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
-            print '>> calling prehook', hookURL
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing pre-hooks')
