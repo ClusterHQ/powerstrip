@@ -11,7 +11,7 @@ from treq.client import HTTPClient
 import json
 import treq
 
-from .. import testtools, passthru
+from .. import testtools, powerstrip
 
 class ProxyTests(TestCase):
 
@@ -26,7 +26,7 @@ class ProxyTests(TestCase):
         self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
         self.dockerPort = self.dockerServer.getHost().port
 
-        self.proxyAPI = passthru.ServerProtocolFactory(
+        self.proxyAPI = powerstrip.ServerProtocolFactory(
                 dockerAddr="127.0.0.1", dockerPort=self.dockerPort)
         self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port

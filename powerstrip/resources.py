@@ -1,5 +1,5 @@
 """
-Some Resources used by passthru.
+Some Resources used by powerstrip.
 """
 from twisted.web import proxy
 from twisted.internet import reactor
