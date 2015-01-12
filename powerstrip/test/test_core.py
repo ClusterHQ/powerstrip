@@ -114,12 +114,12 @@ plugins: {}""" % (endpoint,))
         self.adderTwoServer = reactor.listenTCP(0, self.adderTwoAPI)
         self.adderTwoPort = self.adderTwoServer.getHost().port
 
-    def _hookTest(self, config_yml, adderArgs=dict(pre=True)):
+    def _hookTest(self, config_yml, adderArgs=dict(pre=True), adderTwoArgs=dict(pre=True)):
         """
         Generalised version of a pre-hook test.
         """
         self._getAdder(**adderArgs)
-        self._getAdderTwo(**adderArgs)
+        self._getAdderTwo(**adderTwoArgs)
         self.dockerEndpoint = "/towel"
         self.pluginEndpoint = "/plugin"
         self.args = dict(dockerEndpoint=self.dockerEndpoint,

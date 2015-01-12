@@ -9,9 +9,10 @@ from twisted.web.client import Agent
 from twisted.web.server import NOT_DONE_YET
 from urllib import quote as urlquote
 from zope.interface import directlyProvides
+import StringIO
 import json
 import treq
-import StringIO
+import urlparse
 
 class DockerProxyClient(proxy.ProxyClient):
     """
@@ -19,6 +20,7 @@ class DockerProxyClient(proxy.ProxyClient):
     stream (attach/events) API calls work.
     """
 
+    latestResponsePart = None
     http = True
 
     def handleHeader(self, key, value):
@@ -46,6 +48,12 @@ class DockerProxyClient(proxy.ProxyClient):
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
         self.father.transport.write(data)
+
+
+    def handleResponsePart(self, buffer):
+        self.latestResponsePart = buffer
+        return proxy.ProxyClient.handleResponsePart(self, buffer)
+
 
 
 
@@ -113,9 +121,54 @@ class DockerProxy(proxy.ReverseProxyResource):
             if result is not None:
                 request.content = StringIO.StringIO(json.dumps(result["Body"]))
             # TODO also handle Method and Request
+            ################
+            # RFC 2616 tells us that we can omit the port if it's the default port,
+            # but we have to provide it otherwise
+            if self.port == 80:
+                host = self.host
+            else:
+                host = "%s:%d" % (self.host, self.port)
+            request.requestHeaders.setRawHeaders(b"host", [host])
+            request.content.seek(0, 0)
+            qs = urlparse.urlparse(request.uri)[4]
+            if qs:
+                rest = self.path + '?' + qs
+            else:
+                rest = self.path
+            self.clientFactory = self.proxyClientFactoryClass(
+                request.method, rest, request.clientproto,
+                request.getAllHeaders(), request.content.read(), request)
+            self.reactor.connectTCP(self.host, self.port, self.clientFactory)
+            return NOT_DONE_YET
+            ################
             return proxy.ReverseProxyResource.render(self, request)
         d.addCallback(doneAllPrehooks)
-        d.addErrback(log.err, 'while processing proxy request')
+        d.addErrback(log.err, 'while processing docker request')
+        def decorateDockerResponse(result):
+            self
+            import pdb; pdb.set_trace()
+            return result
+        d.addCallback(decorateDockerResponse)
+        def callPostHook(result, hookURL):
+            # TODO differentiate between Docker response and previous plugin
+            # response somehow...
+            newRequestBody = result["Body"]
+            # TODO also handle Method and Request
+            return self.client.post(hookURL, json.dumps({
+                        "Type": "post-hook",
+                        "OriginalClientMethod": "POST", # TODO
+                        "OriginalClientRequest": "/v1.16/containers/create", # TODO
+                        "OriginalClientBody": originalRequestBody,
+                        "DockerResponseContentType": "text/plain", # TODO
+                        "DockerResponseBody": {}, # TODO
+                        "DockerResponseCode": 404 # TODO
+                    }), headers={'Content-Type': ['application/json']})
+        for postHook in postHooks:
+            hookURL = self.config.plugin_uri(postHook)
+            # XXX need to test with different hookURLs.
+            d.addCallback(callPostHook, hookURL=hookURL)
+            d.addCallback(treq.json_content)
+            d.addErrback(log.err, 'while processing post-hooks')
         return NOT_DONE_YET
 
 
