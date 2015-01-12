@@ -103,8 +103,7 @@ class DockerProxy(proxy.ReverseProxyResource):
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
             # XXX need to test with different hookURLs.
-            d.addCallback(lambda result, hookURL:
-                    callPreHook(result, hookURL=hookURL), hookURL=hookURL)
+            d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing pre-hooks')
         def doneAllPrehooks(result):

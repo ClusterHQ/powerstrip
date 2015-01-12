@@ -186,7 +186,7 @@ plugins:
   adder2: http://127.0.0.1:%(adderTwoPort)d%(pluginEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
-                    {"Number": 3, "SeenByFakeDocker": 42})
+                    {"Number": 4, "SeenByFakeDocker": 42})
         d.addCallback(verify)
         return d
 
