@@ -9,20 +9,26 @@ import json
 
 
 class FakeDockerServer(server.Site):
-    def __init__(self):
-        self.root = FakeDockerRoot()
+    def __init__(self, **kw):
+        self.root = FakeDockerRoot(**kw)
         server.Site.__init__(self, self.root)
-        
-        
+
+
 class FakeDockerRoot(resource.Resource):
     isLeaf = False
-    def __init__(self):
+    def __init__(self, **kw):
         resource.Resource.__init__(self)
-        self.putChild("towel", FakeDockerResource())
+        self.putChild("towel", FakeDockerResource(**kw))
 
 
 class FakeDockerResource(resource.Resource):
     isLeaf = True
+
+    def __init__(self, rawStream=False, chunkedResponse=False):
+        self.rawStream = rawStream
+        self.chunkedResponse = chunkedResponse
+        resource.Resource.__init__(self)
+
     def render_POST(self, request):
         """
         Take a JSON POST body, add an attribute to it "SeenByFakeDocker", then pass
@@ -33,6 +39,12 @@ class FakeDockerResource(resource.Resource):
         if "SeenByFakeDocker" in jsonParsed:
             raise Exception("already seen by a fake docker?!")
         jsonParsed["SeenByFakeDocker"] = 42
+        if not self.rawStream:
+            request.setHeader("Content-Type", "application/json")
+        else:
+            request.setHeader("Content-Type", "application/vnd.docker.raw-stream")
+        if self.chunkedResponse:
+            request.setHeader("Content-Encoding", "chunked")
         return json.dumps(jsonParsed)
 
 

@@ -26,10 +26,6 @@ class ProxyTests(TestCase):
 
         Pre- and post-hook API servers are provided by the individual tests.
         """
-        self.dockerAPI = testtools.FakeDockerServer()
-        self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
-        self.dockerPort = self.dockerServer.getHost().port
-
         self.agent = Agent(reactor) # no connectionpool
         self.client = HTTPClient(self.agent)
 
@@ -43,7 +39,11 @@ class ProxyTests(TestCase):
             shutdowns.append(self.adderTwoServer.stopListening())
         return defer.gatherResults(shutdowns)
 
-    def _configure(self, config_yml):
+    def _configure(self, config_yml, dockerArgs={}):
+        self.dockerAPI = testtools.FakeDockerServer(**dockerArgs)
+        self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
+        self.dockerPort = self.dockerServer.getHost().port
+
         self.config = PluginConfiguration()
         tmp = self.mktemp()
         self.config._default_file = tmp
@@ -226,11 +226,10 @@ plugins:
         entire connection switched down into simple TCP-proxying mode (with
         support for half-close).
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerRawStream=True)
+        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(rawStream=True))
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"raw": "stream"}),
                       headers={'Content-Type': ['application/json']})
-        d.addCallback(treq.json_content)
         def verify(response):
             self.assertEqual(response.headers.getHeader("content-type"),
                              "application/vnd.docker.raw-stream")
@@ -244,11 +243,10 @@ plugins:
         A chunking endpoint like /pull is permitted with no post-hooks (the
         Docker response's Content-Encoding is chunked).
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerChunkedResponse=True)
+        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"chunked": "response"}),
                       headers={'Content-Type': ['application/json']})
-        d.addCallback(treq.json_content)
         def verify(response):
             self.assertEqual(response.headers.getHeader("content-encoding"),
                              "chunked")
