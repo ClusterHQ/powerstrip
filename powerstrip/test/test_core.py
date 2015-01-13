@@ -219,6 +219,57 @@ plugins:
         d.addCallback(verify)
         return d
 
+    def test_stream_endpoint(self):
+        """
+        A streaming (aka hijacking) endpoint like /attach is permitted with no
+        post-hooks (the Docker response's content-type is detected and the
+        entire connection switched down into simple TCP-proxying mode (with
+        support for half-close).
+        """
+        self._configure("endpoints: {}\nplugins: {}", dockerRawStream=True)
+        d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
+                      json.dumps({"raw": "stream"}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response.headers.getHeader("content-type"),
+                             "application/vnd.docker.raw-stream")
+            # TODO Verify that half-close, and bi-directional TCP proxying
+            # works.
+        d.addCallback(verify)
+        return d
+
+    def test_chunked_endpoint(self):
+        """
+        A chunking endpoint like /pull is permitted with no post-hooks (the
+        Docker response's Content-Encoding is chunked).
+        """
+        self._configure("endpoints: {}\nplugins: {}", dockerChunkedResponse=True)
+        d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
+                      json.dumps({"chunked": "response"}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response.headers.getHeader("content-encoding"),
+                             "chunked")
+        d.addCallback(verify)
+        return d
+
+    def test_stream_endpoint_reject_post_hook(self):
+        """
+        A streaming (aka hijacking) endpoint like /attach is rejected if a
+        post-hook is attached: a runtime error is raised when the Content-Type
+        is detected.
+        """
+    test_stream_endpoint_reject_post_hook.skip = "not implemented yet"
+
+    def test_chunked_endpoint_reject_post_hook(self):
+        """
+        A chunking endpoint like /pull is rejected if a post-hook is attached:
+        a runtime error is raised when the Content-Encoding is detected.
+        """
+    test_chunked_endpoint_reject_post_hook.skip = "not implemented yet"
+
     def test_prehook_error_does_not_call_docker(self):
         """
         An error in the pre-hook does not call through to Docker and returns
@@ -254,16 +305,17 @@ plugins:
         """
     test_second_pre_hook_gets_new_request_and_method.skip = "not implemented yet"
 
-    def test_second_post_hook_gets_new_request_and_method(self):
+    def test_second_post_hook_gets_new_request_and_code(self):
         """
-        Chaining post-hooks: the next post-hook gets the request and method from
-        the previous.
+        Chaining post-hooks: the next post-hook gets the request and code from
+        the previous.  Also content-type.
         """
-    test_second_post_hook_gets_new_request_and_method.skip = "not implemented yet"
+    test_second_post_hook_gets_new_request_and_code.skip = "not implemented yet"
 
     def test_endpoint_GET_args(self):
         """
-        An endpoint is matched when the GET arguments change.
+        An endpoint is matched when it has ?-style GET arguments (and no JSON
+        body), and the GET request is passed through.
         """
     test_endpoint_GET_args.skip = "not implemented yet"
 
@@ -272,17 +324,3 @@ plugins:
         An endpoint is matched when there are '*' characters in the string
         """
     test_endpoint_globbing.skip = "not implemented yet"
-
-    def test_stream_endpoint(self):
-        """
-        A streaming (aka hijacking) endpoint like /attach is rejected from
-        endpoints: a runtime error is raised when the Content-Type is detected.
-        """
-    test_stream_endpoint.skip = "not implemented yet"
-
-    def test_chunked_endpoint(self):
-        """
-        A chunking endpoint like /pull is rejected from endpoints: a runtime
-        error is raised when the Content-Encoding is detected.
-        """
-    test_chunked_endpoint.skip = "not implemented yet"

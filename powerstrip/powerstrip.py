@@ -14,6 +14,12 @@ import json
 import treq
 import urlparse
 
+class NoPostHooks(Exception):
+    """
+    Do not run any post-hooks, because of an incompatible Docker response type
+    (streaming/hijacked or chunked).
+    """
+
 class DockerProxyClient(proxy.ProxyClient):
     """
     An HTTP proxy which knows how to break HTTP just right so that Docker
@@ -103,7 +109,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
-            # XXX need to test with different hookURLs.
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing pre-hooks')
@@ -138,6 +143,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                 # might be confusing that you get slightly different behaviour
                 # if you add a postHook.
 
+                # TODO write tests for the following stanza, or throw it away.
                 # Use treq to make request to Docker
                 if self.port == 80:
                     host = self.host
@@ -166,6 +172,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                 # point running them.
                 # TODO Write some tests which require this else clause.
                 proxy.ReverseProxyResource.render(self, request)
+                raise NoPostHooks()
         d.addCallback(doneAllPrehooks)
         d.addErrback(log.err, 'while processing docker request')
         def decorateDockerResponse(result):
@@ -174,36 +181,38 @@ class DockerProxy(proxy.ReverseProxyResource):
                     "Body": result,
                     "Code": 200} # TODO Should support passing through a
                                  # non-JSON non-success response from Docker
+                                 # (and test that a non-success response from
+                                 # Docker is correctly reported to the plugin).
         d.addCallback(decorateDockerResponse)
         # XXX Warning - mutating request could lead to odd results when we try
         # to reproduce the original client queries below.
         def callPostHook(result, hookURL):
             # TODO differentiate between Docker response and previous plugin
             # response somehow...
-            newRequestBody = result["Body"]
             # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
+                        # TODO Write tests for the information provided to the plugin.
                         "Type": "post-hook",
-                        "OriginalClientMethod": "POST", # TODO
-                        "OriginalClientRequest": "/v1.16/containers/create", # TODO
+                        "OriginalClientMethod": request.method,
+                        "OriginalClientRequest": request.uri,
                         "OriginalClientBody": originalRequestBody,
-                        "DockerResponseContentType": "text/plain", # TODO
-                        "DockerResponseBody": newRequestBody,
-                        "DockerResponseCode": 404 # TODO
+                        "DockerResponseContentType": result["ContentType"],
+                        "DockerResponseBody": result["Body"],
+                        "DockerResponseCode": result["Code"],
                     }), headers={'Content-Type': ['application/json']})
         for postHook in postHooks:
             hookURL = self.config.plugin_uri(postHook)
-            # XXX need to test with different hookURLs.
             d.addCallback(callPostHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing post-hooks')
         def sendFinalResponseToClient(result):
-            # TODO Handle actually sending the final response chunk to the
-            # client and closing the client connection using handleResponsePart
-            # and handleResponseEnd on DockerProxyClient.
+            # Write the final response to the client.
             request.write(json.dumps(result["Body"]))
             request.finish()
         d.addCallback(sendFinalResponseToClient)
+        def squashNoPostHooks(failure):
+            failure.trap(NoPostHooks)
+        d.addErrback(squashNoPostHooks)
         return NOT_DONE_YET
 
 
