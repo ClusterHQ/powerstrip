@@ -4,6 +4,7 @@ from treq.client import HTTPClient
 from twisted.internet import reactor, defer
 from twisted.internet.interfaces import IHalfCloseableProtocol
 from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.web import server, proxy
 from twisted.web.client import Agent
 from twisted.web.server import NOT_DONE_YET
@@ -27,6 +28,21 @@ class DockerProxyClient(proxy.ProxyClient):
     """
 
     http = True
+    streaming = False
+    _listener = None
+    responsePartBuffer = None
+
+    # TODO maybe call handlResponsePart and handleReponseEnd manually?
+
+    def registerListener(self, d):
+        """
+        Register a one shot listener, which can fire either with:
+           * Failure(NoPostHooks()) if the proxy is handling comms back to
+             the client (streaming/chunked modes), or
+           * A tuple containing the (response, code, content-type).
+        """
+        # TODO handle ...
+        self._listener = d
 
     def handleHeader(self, key, value):
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
@@ -40,12 +56,28 @@ class DockerProxyClient(proxy.ProxyClient):
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/vnd.docker.raw-stream\r\n"
                 "\r\n")
+            self._streaming = True
+            if self._listener is not None:
+                self._listener.callback(Failure(NoPostHooks()))
+        if key.lower() == "content-encoding" and value == "chunked":
+            self._streaming = True
+            if self._listener is not None:
+                self._listener.callback(Failure(NoPostHooks()))
         return proxy.ProxyClient.handleHeader(self, key, value)
+
+
+    def handleReponsePart(self, buffer):
+        # If we're not in streaming mode, buffer the (only) response part.
+        if self._streaming:
+            proxy.ProxyClient.handleResponsePart(buffer)
+        else:
+            self.responsePartBuffer = buffer
 
 
     def handleResponseEnd(self):
         if self.http:
-            return proxy.ProxyClient.handleResponseEnd(self)
+            if self._streaming:
+                return proxy.ProxyClient.handleResponseEnd(self)
         self.father.transport.loseConnection()
 
 
@@ -135,7 +167,8 @@ class DockerProxy(proxy.ReverseProxyResource):
 
             # TODO We are not handling case 2 yet.  That is what the "if True"
             # is for.
-
+            # XXX not chunked and not hijacked is a property of the Docker
+            # *response*, which we don't have until we make the request.
             if True:
                 # TODO Should be something like "not chunked and not hijacked".
                 # TODO Could also use "not postHooks"... because it's only if
