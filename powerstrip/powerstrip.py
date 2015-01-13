@@ -20,7 +20,6 @@ class DockerProxyClient(proxy.ProxyClient):
     stream (attach/events) API calls work.
     """
 
-    latestResponsePart = None
     http = True
 
     def handleHeader(self, key, value):
@@ -48,12 +47,6 @@ class DockerProxyClient(proxy.ProxyClient):
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
         self.father.transport.write(data)
-
-
-    def handleResponsePart(self, buffer):
-        self.latestResponsePart = buffer
-        return proxy.ProxyClient.handleResponsePart(self, buffer)
-
 
 
 
@@ -120,35 +113,69 @@ class DockerProxy(proxy.ReverseProxyResource):
             # understands it.
             if result is not None:
                 request.content = StringIO.StringIO(json.dumps(result["Body"]))
+
             # TODO also handle Method and Request
-            ################
-            # RFC 2616 tells us that we can omit the port if it's the default port,
-            # but we have to provide it otherwise
-            if self.port == 80:
-                host = self.host
+
+            # In order to support post-hooks, we need two modes:
+            #
+            # 1. The response from Docker came as a single chunk, and we want
+            #    to buffer it in memory and not pass it on to the user until we've
+            #    passed it through all of the post-hooks.  This is much like a
+            #    regular treq request.
+            #
+            # 2. It's a streaming request, in which case we want normal
+            #    ReverseProxyResource.render behaviour (do not buffer entire
+            #    response, handle streaming protocols, etc).
+            #
+
+            # TODO We are not handling case 2 yet.  That is what the "if True"
+            # is for.
+
+            if True:
+                # TODO Should be something like "not chunked and not hijacked".
+                # TODO Could also use "not postHooks"... because it's only if
+                # you want postHooks that you have to do this. But then it
+                # might be confusing that you get slightly different behaviour
+                # if you add a postHook.
+
+                # Use treq to make request to Docker
+                if self.port == 80:
+                    host = self.host
+                else:
+                    host = "%s:%d" % (self.host, self.port)
+                #request.requestHeaders.setRawHeaders(b"host", [host])
+                request.content.seek(0, 0)
+                qs = urlparse.urlparse(request.uri)[4]
+                if qs:
+                    rest = self.path + '?' + qs
+                else:
+                    rest = self.path
+
+                # Make a request to Docker, based on the client's request.
+                # We can only handle JSON.  XXX Think about GET requests...
+                d = self.client.request(
+                        request.method, "http://%s%s" % (host, rest),
+                        data=request.content.read(),
+                        headers={'Content-Type': ["application/json"]})
+                d.addCallback(treq.json_content)
+                return d
             else:
-                host = "%s:%d" % (self.host, self.port)
-            request.requestHeaders.setRawHeaders(b"host", [host])
-            request.content.seek(0, 0)
-            qs = urlparse.urlparse(request.uri)[4]
-            if qs:
-                rest = self.path + '?' + qs
-            else:
-                rest = self.path
-            self.clientFactory = self.proxyClientFactoryClass(
-                request.method, rest, request.clientproto,
-                request.getAllHeaders(), request.content.read(), request)
-            self.reactor.connectTCP(self.host, self.port, self.clientFactory)
-            return NOT_DONE_YET
-            ################
-            return proxy.ReverseProxyResource.render(self, request)
+                # Join up the connections like a true proxy for chunked or
+                # hijacked responses.  This returns NOT_DONE_YET.  TODO
+                # Shortcut processing all the ensuing post-hooks, there's no
+                # point.
+                proxy.ReverseProxyResource.render(self, request)
         d.addCallback(doneAllPrehooks)
         d.addErrback(log.err, 'while processing docker request')
         def decorateDockerResponse(result):
-            self
-            import pdb; pdb.set_trace()
-            return result
+            # Make Docker's response look like it came from an upstream plugin.
+            return {"ContentType": "application/json",
+                    "Body": result,
+                    "Code": 200} # TODO Should support passing through a
+                                 # non-JSON non-success response from Docker
         d.addCallback(decorateDockerResponse)
+        # XXX Warning - mutating request could lead to odd results when we try
+        # to reproduce the original client queries below.
         def callPostHook(result, hookURL):
             # TODO differentiate between Docker response and previous plugin
             # response somehow...
@@ -160,7 +187,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                         "OriginalClientRequest": "/v1.16/containers/create", # TODO
                         "OriginalClientBody": originalRequestBody,
                         "DockerResponseContentType": "text/plain", # TODO
-                        "DockerResponseBody": {}, # TODO
+                        "DockerResponseBody": newRequestBody,
                         "DockerResponseCode": 404 # TODO
                     }), headers={'Content-Type': ['application/json']})
         for postHook in postHooks:
@@ -169,6 +196,13 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(callPostHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             d.addErrback(log.err, 'while processing post-hooks')
+        def sendFinalResponseToClient(result):
+            # TODO Handle actually sending the final response chunk to the
+            # client and closing the client connection using handleResponsePart
+            # and handleResponseEnd on DockerProxyClient.
+            request.write(json.dumps(result["Body"]))
+            request.finish()
+        d.addCallback(sendFinalResponseToClient)
         return NOT_DONE_YET
 
 
