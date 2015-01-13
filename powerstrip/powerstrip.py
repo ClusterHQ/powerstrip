@@ -163,7 +163,8 @@ class DockerProxy(proxy.ReverseProxyResource):
                 # Join up the connections like a true proxy for chunked or
                 # hijacked responses.  This returns NOT_DONE_YET.  TODO
                 # Shortcut processing all the ensuing post-hooks, there's no
-                # point.
+                # point running them.
+                # TODO Write some tests which require this else clause.
                 proxy.ReverseProxyResource.render(self, request)
         d.addCallback(doneAllPrehooks)
         d.addErrback(log.err, 'while processing docker request')

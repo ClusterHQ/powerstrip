@@ -43,13 +43,6 @@ class ProxyTests(TestCase):
             shutdowns.append(self.adderTwoServer.stopListening())
         return defer.gatherResults(shutdowns)
 
-    def _get_proxy_instance(self, configuration):
-        """
-        Given a yaml configuration (with placeholders for interpolation of
-        current runtime ports for the test), return an appropriately configured
-        proxy instance.
-        """
-
     def _configure(self, config_yml):
         self.config = PluginConfiguration()
         tmp = self.mktemp()
@@ -211,7 +204,20 @@ plugins:
         """
         Chaining post-hooks: adding twice means you get +2.
         """
-    test_adding_post_hook_twice_plugin.skip = "not implemented yet"
+        d = self._hookTest("""endpoints:
+  "POST %(dockerEndpoint)s":
+    pre: []
+    post: [adder, adder2]
+plugins:
+  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
+  adder2: http://127.0.0.1:%(adderTwoPort)d%(pluginEndpoint)s""",
+            adderArgs=dict(post=True),
+            adderTwoArgs=dict(post=True))
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 4, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
 
     def test_prehook_error_does_not_call_docker(self):
         """
