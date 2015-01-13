@@ -231,8 +231,8 @@ plugins:
                       json.dumps({"raw": "stream"}),
                       headers={'Content-Type': ['application/json']})
         def verify(response):
-            self.assertEqual(response.headers.getHeader("content-type"),
-                             "application/vnd.docker.raw-stream")
+            self.assertEqual(response.headers.getRawHeaders("content-type"),
+                             ["application/vnd.docker.raw-stream"])
             # TODO Verify that half-close, and bi-directional TCP proxying
             # works.
         d.addCallback(verify)
@@ -248,8 +248,8 @@ plugins:
                       json.dumps({"chunked": "response"}),
                       headers={'Content-Type': ['application/json']})
         def verify(response):
-            self.assertEqual(response.headers.getHeader("content-encoding"),
-                             "chunked")
+            self.assertEqual(response.headers.getRawHeaders("content-encoding"),
+                             ["chunked"])
         d.addCallback(verify)
         return d
 
