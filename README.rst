@@ -201,7 +201,7 @@ Any of the Docker endpoints can be matched - so for example the following routes
 * ``POST /*/containers/*/stop``
 * ``POST /*/containers/*/kill``
 
-A useful resource when defining your endpoints is the Docker remote API documentation: https://docs.docker.com/reference/api
+A useful resource when defining your endpoints is the `Docker remote API documentation <https://docs.docker.com/reference/api>`_
 
 Limitations
 -----------
@@ -302,8 +302,8 @@ Plugin Ideas
 ============
 
 * A post hook for containers => start that will block until the container is fully connected to the weave bridge
-* A pre hook for containers => create that will inject ENV variables loaded from consul or etcd
-* A post hook for containers => {start,stop} that will update consul or etcd with the containers exposed endpoints
+* A pre hook for containers => create that will inject ENV variables loaded from `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_
+* A post hook for containers => {start,stop} that will update `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_ with the containers exposed endpoints
 
 License
 =======
