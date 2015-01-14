@@ -28,9 +28,9 @@ class DockerProxyClient(proxy.ProxyClient):
     """
 
     http = True
-    streaming = False
+    _streaming = False
     _listener = None
-    responsePartBuffer = None
+    _responsePartBuffer = None
 
     # TODO maybe call handlResponsePart and handleReponseEnd manually?
 
@@ -41,7 +41,6 @@ class DockerProxyClient(proxy.ProxyClient):
              the client (streaming/chunked modes), or
            * A tuple containing the (response, code, content-type).
         """
-        # TODO handle ...
         self._listener = d
 
     def handleHeader(self, key, value):
@@ -71,13 +70,16 @@ class DockerProxyClient(proxy.ProxyClient):
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(buffer)
         else:
-            self.responsePartBuffer = buffer
+            self._responsePartBuffer = buffer
 
 
     def handleResponseEnd(self):
         if self.http:
             if self._streaming:
                 return proxy.ProxyClient.handleResponseEnd(self)
+            else:
+                # TODO handle code, content-type
+                self._listener.callback((self._responsePartBuffer, -1, "elves"))
         self.father.transport.loseConnection()
 
 
@@ -90,6 +92,14 @@ class DockerProxyClient(proxy.ProxyClient):
 
 class DockerProxyClientFactory(proxy.ProxyClientFactory):
     protocol = DockerProxyClient
+    def onCreate(self, d):
+        self._onBuild = d
+
+    def buildProtocol(self, addr):
+        client = proxy.ProxyClientFactory.buildProtocol(self, addr)
+        self._onBuild.callback(client)
+        return client
+
 
 
 class DockerProxy(proxy.ReverseProxyResource):
@@ -150,62 +160,35 @@ class DockerProxy(proxy.ReverseProxyResource):
             # understands it.
             if result is not None:
                 request.content = StringIO.StringIO(json.dumps(result["Body"]))
-
-            # TODO also handle Method and Request
-
-            # In order to support post-hooks, we need two modes:
-            #
-            # 1. The response from Docker came as a single chunk, and we want
-            #    to buffer it in memory and not pass it on to the user until we've
-            #    passed it through all of the post-hooks.  This is much like a
-            #    regular treq request.
-            #
-            # 2. It's a streaming request, in which case we want normal
-            #    ReverseProxyResource.render behaviour (do not buffer entire
-            #    response, handle streaming protocols, etc).
-            #
-
-            # TODO We are not handling case 2 yet.  That is what the "if True"
-            # is for.
-            # XXX not chunked and not hijacked is a property of the Docker
-            # *response*, which we don't have until we make the request.
-            if True:
-                # TODO Should be something like "not chunked and not hijacked".
-                # TODO Could also use "not postHooks"... because it's only if
-                # you want postHooks that you have to do this. But then it
-                # might be confusing that you get slightly different behaviour
-                # if you add a postHook.
-
-                # TODO write tests for the following stanza, or throw it away.
-                # Use treq to make request to Docker
-                if self.port == 80:
-                    host = self.host
-                else:
-                    host = "%s:%d" % (self.host, self.port)
-                #request.requestHeaders.setRawHeaders(b"host", [host])
-                request.content.seek(0, 0)
-                qs = urlparse.urlparse(request.uri)[4]
-                if qs:
-                    rest = self.path + '?' + qs
-                else:
-                    rest = self.path
-
-                # Make a request to Docker, based on the client's request.
-                # We can only handle JSON.  XXX Think about GET requests...
-                d = self.client.request(
-                        request.method, "http://%s%s" % (host, rest),
-                        data=request.content.read(),
-                        headers={'Content-Type': ["application/json"]})
-                d.addCallback(treq.json_content)
-                return d
+            # TODO get a reference to the deferred on the not-yet-existing
+            # client.
+            ###########################
+            if self.port == 80:
+                host = self.host
             else:
-                # Join up the connections like a true proxy for chunked or
-                # hijacked responses.  This returns NOT_DONE_YET.  TODO
-                # Shortcut processing all the ensuing post-hooks, there's no
-                # point running them.
-                # TODO Write some tests which require this else clause.
-                proxy.ReverseProxyResource.render(self, request)
-                raise NoPostHooks()
+                host = "%s:%d" % (self.host, self.port)
+            request.requestHeaders.setRawHeaders(b"host", [host])
+            request.content.seek(0, 0)
+            qs = urlparse.urlparse(request.uri)[4]
+            if qs:
+                rest = self.path + '?' + qs
+            else:
+                rest = self.path
+            clientFactory = self.proxyClientFactoryClass(
+                request.method, rest, request.clientproto,
+                request.getAllHeaders(), request.content.read(), request)
+            self.reactor.connectTCP(self.host, self.port, clientFactory)
+            d = defer.Deferred()
+            clientFactory.onCreate(d)
+            def inspect(client):
+                d2 = defer.Deferred()
+                client.registerListener(d2)
+                d2.chainDeferred(d)
+                return d
+            d.addCallback(inspect)
+            return d
+            ###########################
+
         d.addCallback(doneAllPrehooks)
         d.addErrback(log.err, 'while processing docker request')
         def decorateDockerResponse(result):

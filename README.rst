@@ -30,7 +30,7 @@ The target audience of this project is folks to want to write Docker extensions,
 Goal of project
 ---------------
 
-It should eventually be possible to run a Powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
+It should eventually be possible to run, for example, a Powerstrip-enabled Docker Swarm with Flocker and Weave both loaded as extensions.
 
 .. code:: yaml
 
@@ -49,6 +49,13 @@ It should eventually be possible to run a Powerstrip-enabled Docker Swarm with F
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
 But Powerstrip can be used to modify any Docker behavior at all.
+
+
+Demo
+----
+Portable volumes with powerstrip + flocker:
+
+<video demo>
 
 
 Try it out
