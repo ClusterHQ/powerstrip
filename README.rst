@@ -44,7 +44,7 @@ It should eventually be possible to run a Powerstrip-enabled Docker Swarm with F
         post: [weave, flocker]
     plugins:
       flocker: http://flocker/flocker-plugin
-      weave: http://flocker/weave-plugin
+      weave: http://weave/weave-plugin
 
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
