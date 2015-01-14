@@ -32,6 +32,15 @@ class DockerProxyClient(proxy.ProxyClient):
     _listener = None
     _responsePartBuffer = None
 
+    def _fireListener(self, result):
+        if self._listener is not None:
+            print "firing listener with", result
+            d = self._listener
+            self._listener = None
+            d.callback(result)
+        else:
+            print "no listener, discarding result", result
+
     # TODO maybe call handlResponsePart and handleReponseEnd manually?
 
     def registerListener(self, d):
@@ -56,20 +65,17 @@ class DockerProxyClient(proxy.ProxyClient):
                 "Content-Type: application/vnd.docker.raw-stream\r\n"
                 "\r\n")
             self._streaming = True
-            if self._listener is not None:
-                print "streaming raw"
-                import pdb; pdb.set_trace()
-                self._listener.callback(Failure(NoPostHooks()))
+            print "streaming raw"
+            self._fireListener(Failure(NoPostHooks()))
         if key.lower() == "content-encoding" and value == "chunked":
             self._streaming = True
-            if self._listener is not None:
-                print "streaming chunked"
-                import pdb; pdb.set_trace()
-                self._listener.callback(Failure(NoPostHooks()))
+            print "streaming chunked"
+            self._fireListener(Failure(NoPostHooks()))
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
     def handleReponsePart(self, buffer):
+        print ">>>", buffer
         # If we're not in streaming mode, buffer the (only) response part.
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(buffer)
@@ -82,14 +88,22 @@ class DockerProxyClient(proxy.ProxyClient):
             if self._streaming:
                 return proxy.ProxyClient.handleResponseEnd(self)
             else:
-                # TODO handle code, content-type
+                # TODO handle code, content-type; handle non-JSON
+                # content-types.
                 print "not streaming"
-                import pdb; pdb.set_trace()
-                self._listener.callback((self._responsePartBuffer, -1, "elves"))
-        self.father.transport.loseConnection()
+                self._fireListener(
+                        {"Body": json.loads(self._responsePartBuffer),
+                         "Code": -1,
+                         "ContentType": "elves"})
+        else:
+            self.father.transport.loseConnection()
 
 
     def rawDataReceived(self, data):
+        if self.http and not self._streaming:
+            # XXX rawDataReceived feels like ENTIRELY the wrong place to put
+            # this. But handleResponsePart doesn't seem to be getting called!?
+            self._responsePartBuffer = data
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
         self.father.transport.write(data)
@@ -98,12 +112,22 @@ class DockerProxyClient(proxy.ProxyClient):
 
 class DockerProxyClientFactory(proxy.ProxyClientFactory):
     protocol = DockerProxyClient
+    _listener = None
     def onCreate(self, d):
-        self._onBuild = d
+        self._listener = d
+
+    def _fireListener(self, result):
+        if self._listener is not None:
+            print "firing factory listener with", result
+            d = self._listener
+            self._listener = None
+            d.callback(result)
+        else:
+            print "no listener, discarding factory result", result
 
     def buildProtocol(self, addr):
         client = proxy.ProxyClientFactory.buildProtocol(self, addr)
-        self._onBuild.callback(client)
+        self._fireListener(client)
         return client
 
 
@@ -184,28 +208,24 @@ class DockerProxy(proxy.ReverseProxyResource):
                 request.method, rest, request.clientproto,
                 request.getAllHeaders(), request.content.read(), request)
             self.reactor.connectTCP(self.host, self.port, clientFactory)
+            def debug(result):
+                print ">> d", result
+                return result
             d = defer.Deferred()
             clientFactory.onCreate(d)
+            d.addCallback(debug)
             def inspect(client):
                 d2 = defer.Deferred()
+                def debug2(result):
+                    print ">> d2", result
+                    return result
+                d2.addCallback(debug2)
                 client.registerListener(d2)
-                d2.chainDeferred(d)
-                return d
+                return d2
             d.addCallback(inspect)
             return d
             ###########################
-
         d.addCallback(doneAllPrehooks)
-        d.addErrback(log.err, 'while processing docker request')
-        def decorateDockerResponse(result):
-            # Make Docker's response look like it came from an upstream plugin.
-            return {"ContentType": "application/json",
-                    "Body": result,
-                    "Code": 200} # TODO Should support passing through a
-                                 # non-JSON non-success response from Docker
-                                 # (and test that a non-success response from
-                                 # Docker is correctly reported to the plugin).
-        d.addCallback(decorateDockerResponse)
         # XXX Warning - mutating request could lead to odd results when we try
         # to reproduce the original client queries below.
         def callPostHook(result, hookURL):

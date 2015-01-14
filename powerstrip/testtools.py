@@ -98,6 +98,9 @@ class AdderResource(resource.Resource):
         assert "Method" in jsonParsed
         assert "Request" in jsonParsed
         assert "Body" in jsonParsed
+        print "*" * 80
+        print "PRE HOOK"
+        print "*" * 80
         jsonParsed["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         return json.dumps(dict(Method="POST",
@@ -131,6 +134,9 @@ class AdderResource(resource.Resource):
                 Code: 200,
             }
         """
+        print "*" * 80
+        print "POST HOOK"
+        print "*" * 80
         assert "OriginalClientMethod" in jsonParsed
         assert "OriginalClientRequest" in jsonParsed
         assert "OriginalClientBody" in jsonParsed
@@ -156,6 +162,9 @@ class AdderResource(resource.Resource):
 
         If explode is set, it always returns a 500 error.
         """
+        print "*" * 80
+        print "DOCKER API"
+        print "*" * 80
         jsonPayload = request.content.read()
         jsonParsed = json.loads(jsonPayload)
 
