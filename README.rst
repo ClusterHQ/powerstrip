@@ -194,6 +194,15 @@ The request ``POST /v1.16/container/create`` would be matched by all of the foll
 
 Note: Query arguments are stripped for matching purposes.
 
+Any of the Docker endpoints can be matched - so for example the following routes are perfectly valid:
+
+* ``POST /*/containers/*/create``
+* ``POST /*/containers/*/start``
+* ``POST /*/containers/*/stop``
+* ``POST /*/containers/*/kill``
+
+A useful resource when defining your endpoints is the Docker remote API documentation: https://docs.docker.com/reference/api
+
 Limitations
 -----------
 
