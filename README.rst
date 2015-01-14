@@ -298,6 +298,13 @@ Possible improvements
 
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
 
+Plugin Ideas
+============
+
+* A post hook for containers => start that will block until the container is fully connected to the weave bridge
+* A pre hook for containers => create that will inject ENV variables loaded from consul or etcd
+* A post hook for containers => {start,stop} that will update consul or etcd with the containers exposed endpoints
+
 License
 =======
 
