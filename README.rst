@@ -48,8 +48,9 @@ It should eventually be possible to run a Powerstrip-enabled Docker Swarm with F
 
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
-But Powerstrip can be used to modify any Docker behavior at all.
+The Powerstrip configuration file can match any of the Docker API endpoints.
 
+This enables you to modify any of the Docker behaviors and means Powerstrip will adapt easily to future changes in the Docker HTTP api.
 
 Try it out
 ----------
