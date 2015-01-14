@@ -57,10 +57,14 @@ class DockerProxyClient(proxy.ProxyClient):
                 "\r\n")
             self._streaming = True
             if self._listener is not None:
+                print "streaming raw"
+                import pdb; pdb.set_trace()
                 self._listener.callback(Failure(NoPostHooks()))
         if key.lower() == "content-encoding" and value == "chunked":
             self._streaming = True
             if self._listener is not None:
+                print "streaming chunked"
+                import pdb; pdb.set_trace()
                 self._listener.callback(Failure(NoPostHooks()))
         return proxy.ProxyClient.handleHeader(self, key, value)
 
@@ -79,6 +83,8 @@ class DockerProxyClient(proxy.ProxyClient):
                 return proxy.ProxyClient.handleResponseEnd(self)
             else:
                 # TODO handle code, content-type
+                print "not streaming"
+                import pdb; pdb.set_trace()
                 self._listener.callback((self._responsePartBuffer, -1, "elves"))
         self.father.transport.loseConnection()
 
