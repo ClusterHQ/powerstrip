@@ -196,7 +196,7 @@ Note: Query arguments are stripped for matching purposes.
 
 Any of the Docker endpoints can be matched - so for example the following routes are perfectly valid:
 
-* ``POST /*/containers/*/create``
+* ``POST /*/containers/create``
 * ``POST /*/containers/*/start``
 * ``POST /*/containers/*/stop``
 * ``POST /*/containers/*/kill``
