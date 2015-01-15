@@ -130,6 +130,13 @@ class ProxyTests(TestCase):
 
     def test_chunked_endpoint(self):
         """
+        It's fine to blacklist some endpoints.
+        As mentioned elsewhere, it's going to be a problem to blacklist Transfer-Encoding: chunked.
+
         A chunking endpoint like /pull is rejected from endpoints: a runtime
         error is raised when the Content-Encoding is detected.
         """
+
+    So... those need to be implemented.
+    There need to be some tests that verify the requests are made to the hooks with all the right values.
+    Similarly, tests that verify the results of the hooks are delivered to the right place with all the right values.
