@@ -35,6 +35,16 @@ It should eventually be possible to run a Powerstrip-enabled Docker Swarm with F
 .. code:: yaml
 
     endpoints:
+
+      Wildcards here encourage people to write configurations that might be easily broken by Docker upgrades.
+      It might be worth using URLs like /v1.{14,15,16}/containers/create instead.
+      yaml anchors can help avoid making this too verbose.
+
+      Representing two different parts of the matching data, HTTP method and URI, as a single string here is maybe not optimal.
+      yaml provides the tools to represent these two as structured data instead of a serialized string that needs to be parsed.
+      for example, a tuple: ``(POST, "/*/containers/create"):
+      it might be nicer to take advantage of that.
+
       "POST /*/containers/create":
         # plugins are applied in list order
         pre: [flocker, weave]
@@ -89,6 +99,7 @@ Try it out like this:
 Writing a plugin
 ----------------
 
+It's not a REST API.  It's just an HTTP API.
 A plugin is just a REST API with a single endpoint.
 Use your favourite framework and language to write it.
 
@@ -146,10 +157,17 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
 
     {
         Type: "post-hook",
+
+        I'd suggest OriginalRequest: { same structure as pre-hook request body }
         OriginalClientMethod: "POST",
         OriginalClientRequest: "/v1.16/containers/create",
         OriginalClientBody: { ... },
+
+        And this could be DockerResponse: { same structure as post-hook response body }
         DockerResponseContentType: "text/plain",
+        Parsing the body /sometimes/ but not other times is probably a bad idea.
+        It's extra complexity and an extra place for the plugin developer to make a mistake.
+        I see the appeal of parsing the json for the application but think the benefits are pretty much balanced out by the drawbacks.
         DockerResponseBody: { ... } (if application/json)
                             or "not found" (if text/plain)
                             or null (if it was a GET request),
@@ -174,6 +192,7 @@ Chaining
 
 Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
+I suspect it should be possible to *explicitly* handle http errors in either pre- or post-hooks (instead of not possible in pre- and implicit/unavoidable in post-).
 If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
 You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought plugin authors would like to know about Docker error messages.
 
@@ -181,6 +200,7 @@ You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/do
 Defining Endpoints
 ------------------
 
+Is it shell/-like/ globbing or is it actual shell globbing?
 Endpoints are defined using UNIX shell-like globbing.
 The request ``POST /v1.16/container/create`` would be matched by all of the following endpoint definitions:
 
@@ -197,6 +217,14 @@ Limitations
 -----------
 
 Powerstrip does not support adding hooks for:
+
+Woah wait what?
+First, I think you mean Transfer-Encoding here.
+Content-Encoding is for media-type negotiation.
+Second, you're not allowed to care about the Transfer-Encoding.
+No matter what Transfer-Encoding a particular request uses, it's the same request.
+An HTTP client is allowed to use chunked Transfer-Encoding for anything.
+So this limitation is going to break random HTTP clients (in a fun way of silently bypassing all of the plugins and going straight to Docker).
 
 * Content-encoding: chunked
 * Content-type: application/vnd.docker.raw-stream
@@ -220,6 +248,7 @@ Then you can just specify the URL using e.g. http://plugin/, assuming "plugin" i
 Contributing
 ------------
 
+travis-ci has non-beta support for Python projects.
 We plan to do CI with from https://drone.io/ for unit tests.
 Integration tests will exist but only get run manually for now.
 
@@ -252,6 +281,7 @@ Pseudocode
     def sendErrorToClient():
         pass
 
+    I guess one of these is actually postHooks
     preHooks = [flocker, weave]
     preHooks = [weave, flocker]
     def receive_req_from_client(method, request, body):
