@@ -34,13 +34,9 @@ class DockerProxyClient(proxy.ProxyClient):
 
     def _fireListener(self, result):
         if self._listener is not None:
-            import pdb; pdb.set_trace()
-            print "firing listener with", result
             d = self._listener
             self._listener = None
             d.callback(result)
-        else:
-            print "no listener, discarding result", result
 
     # TODO maybe call handlResponsePart and handleReponseEnd manually?
 
@@ -66,20 +62,17 @@ class DockerProxyClient(proxy.ProxyClient):
                 "Content-Type: application/vnd.docker.raw-stream\r\n"
                 "\r\n")
             self._streaming = True
-            print "streaming raw"
             self._fireListener(Failure(NoPostHooks()))
         if key.lower() == "content-encoding" and value == "chunked":
             self._streaming = True
-            print "streaming chunked"
             self._fireListener(Failure(NoPostHooks()))
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
     def handleResponsePart(self, buffer):
-        print ">>>", buffer
         # If we're not in streaming mode, buffer the (only) response part.
         if self._streaming:
-            proxy.ProxyClient.handleResponsePart(buffer)
+            proxy.ProxyClient.handleResponsePart(self, buffer)
         else:
             self._responsePartBuffer += buffer
 
@@ -91,7 +84,6 @@ class DockerProxyClient(proxy.ProxyClient):
             else:
                 # TODO handle code, content-type; handle non-JSON
                 # content-types.
-                print "not streaming"
                 self._fireListener(
                         {"Body": json.loads(self._responsePartBuffer),
                          "Code": -1,
@@ -115,12 +107,9 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 
     def _fireListener(self, result):
         if self._listener is not None:
-            print "firing factory listener with", result
             d = self._listener
             self._listener = None
             d.callback(result)
-        else:
-            print "no listener, discarding factory result", result
 
     def buildProtocol(self, addr):
         client = proxy.ProxyClientFactory.buildProtocol(self, addr)
@@ -206,7 +195,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                 request.getAllHeaders(), request.content.read(), request)
             self.reactor.connectTCP(self.host, self.port, clientFactory)
             def debug(result):
-                print ">> d", result
                 return result
             d = defer.Deferred()
             clientFactory.onCreate(d)
@@ -217,7 +205,6 @@ class DockerProxy(proxy.ReverseProxyResource):
         def inspect(client):
             d = defer.Deferred()
             def debug(result):
-                print ">> d2", result
                 return result
             d.addCallback(debug)
             client.registerListener(d)
