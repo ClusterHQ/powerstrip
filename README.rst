@@ -1,6 +1,9 @@
 Powerstrip: a tool to prototype Docker extensions
 =================================================
 
+At ClusterHQ we are participating in the ongoing effort in the Docker community to add an extensions API to Docker.
+You can join the effort at `#docker-extensions` on Freenode.
+
 .. image:: powerstrip.jpg
 
 Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip hooks") into the same Docker daemon.
