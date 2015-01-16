@@ -30,10 +30,11 @@ class DockerProxyClient(proxy.ProxyClient):
     http = True
     _streaming = False
     _listener = None
-    _responsePartBuffer = None
+    _responsePartBuffer = b""
 
     def _fireListener(self, result):
         if self._listener is not None:
+            import pdb; pdb.set_trace()
             print "firing listener with", result
             d = self._listener
             self._listener = None
@@ -74,13 +75,13 @@ class DockerProxyClient(proxy.ProxyClient):
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
-    def handleReponsePart(self, buffer):
+    def handleResponsePart(self, buffer):
         print ">>>", buffer
         # If we're not in streaming mode, buffer the (only) response part.
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(buffer)
         else:
-            self._responsePartBuffer = buffer
+            self._responsePartBuffer += buffer
 
 
     def handleResponseEnd(self):
@@ -100,10 +101,6 @@ class DockerProxyClient(proxy.ProxyClient):
 
 
     def rawDataReceived(self, data):
-        if self.http and not self._streaming:
-            # XXX rawDataReceived feels like ENTIRELY the wrong place to put
-            # this. But handleResponsePart doesn't seem to be getting called!?
-            self._responsePartBuffer = data
         if self.http:
             return proxy.ProxyClient.rawDataReceived(self, data)
         self.father.transport.write(data)
