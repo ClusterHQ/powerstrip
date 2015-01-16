@@ -214,18 +214,18 @@ class DockerProxy(proxy.ReverseProxyResource):
             d = defer.Deferred()
             clientFactory.onCreate(d)
             d.addCallback(debug)
-            def inspect(client):
-                d2 = defer.Deferred()
-                def debug2(result):
-                    print ">> d2", result
-                    return result
-                d2.addCallback(debug2)
-                client.registerListener(d2)
-                return d2
-            d.addCallback(inspect)
             return d
             ###########################
         d.addCallback(doneAllPrehooks)
+        def inspect(client):
+            d = defer.Deferred()
+            def debug(result):
+                print ">> d2", result
+                return result
+            d.addCallback(debug)
+            client.registerListener(d)
+            return d
+        d.addCallback(inspect)
         # XXX Warning - mutating request could lead to odd results when we try
         # to reproduce the original client queries below.
         def callPostHook(result, hookURL):
@@ -246,7 +246,6 @@ class DockerProxy(proxy.ReverseProxyResource):
             hookURL = self.config.plugin_uri(postHook)
             d.addCallback(callPostHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
-            d.addErrback(log.err, 'while processing post-hooks')
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
             request.write(json.dumps(result["Body"]))
@@ -255,6 +254,7 @@ class DockerProxy(proxy.ReverseProxyResource):
         def squashNoPostHooks(failure):
             failure.trap(NoPostHooks)
         d.addErrback(squashNoPostHooks)
+        d.addErrback(log.err, 'while running chain')
         return NOT_DONE_YET
 
 
