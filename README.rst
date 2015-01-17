@@ -183,7 +183,7 @@ The adapter responds with:
 
     {
         PowerstripProtocolVersion: 1,
-        ModifiedResponse: {
+        ModifiedServerResponse: {
             ContentType: "application/json",
             Body: { ... },
             Code: 200
