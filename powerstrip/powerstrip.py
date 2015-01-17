@@ -122,7 +122,8 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
 
-    def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None, path='', reactor=reactor, config=None):
+    def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None,
+            path='', reactor=reactor, config=None):
         # XXX requires Docker to be run with -H 0.0.0.0:2375, shortcut to avoid
         # making ReverseProxyResource cope with UNIX sockets.
         if config is None:
@@ -146,10 +147,11 @@ class DockerProxy(proxy.ReverseProxyResource):
     def render(self, request, reactor=reactor):
         # We are processing a leaf request.
         # Get the original request body from the client.
-        # TODO: add a test for this assert
-        assert request.requestHeaders.getRawHeaders('content-type') == ["application/json"]
-        originalRequestBody = json.loads(request.content.read())
-        request.content.seek(0) # hee hee
+        if request.requestHeaders.getRawHeaders('content-type') == ["application/json"]:
+            originalRequestBody = json.loads(request.content.read())
+            request.content.seek(0) # hee hee
+        else:
+            originalRequestBody = None
         preHooks = []
         postHooks = []
         d = defer.succeed(None)
@@ -164,13 +166,16 @@ class DockerProxy(proxy.ReverseProxyResource):
             if result is None:
                 newRequestBody = originalRequestBody
             else:
-                newRequestBody = result["Body"]
+                newRequestBody = result["ModifiedClientRequest"]["Body"]
             # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
+                        "PowerstripProtocolVersion": 1,
                         "Type": "pre-hook",
-                        "Method": request.method,
-                        "Request": request.method,
-                        "Body": newRequestBody,
+                        "ClientRequest": {
+                            "Method": request.method,
+                            "Request": request.method,
+                            "Body": newRequestBody,
+                        }
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
             hookURL = self.config.plugin_uri(preHook)
@@ -182,7 +187,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             # mutate request in-place in such a way that ReverseProxyResource
             # understands it.
             if result is not None:
-                request.content = StringIO.StringIO(json.dumps(result["Body"]))
+                request.content = StringIO.StringIO(json.dumps(result["ModifiedClientRequest"]))
             # TODO get a reference to the deferred on the not-yet-existing
             # client.
             ###########################
@@ -223,13 +228,18 @@ class DockerProxy(proxy.ReverseProxyResource):
             # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
                         # TODO Write tests for the information provided to the plugin.
+                        "PowerstripProtocolVersion": 1,
                         "Type": "post-hook",
-                        "OriginalClientMethod": request.method,
-                        "OriginalClientRequest": request.uri,
-                        "OriginalClientBody": originalRequestBody,
-                        "DockerResponseContentType": result["ContentType"],
-                        "DockerResponseBody": result["Body"],
-                        "DockerResponseCode": result["Code"],
+                        "ClientRequest": {
+                            "Method": request.method,
+                            "Request": request.uri,
+                            "Body": originalRequestBody,
+                            },
+                        "ServerResponse": {
+                            "ContentType": result["ContentType"],
+                            "Body": result["Body"],
+                            "Code": result["Code"],
+                        },
                     }), headers={'Content-Type': ['application/json']})
         for postHook in postHooks:
             hookURL = self.config.plugin_uri(postHook)
@@ -237,7 +247,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
-            request.write(json.dumps(result["Body"]))
+            request.write(json.dumps(result["ModifiedServerResponse"]))
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):

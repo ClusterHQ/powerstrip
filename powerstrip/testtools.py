@@ -84,78 +84,24 @@ class AdderResource(resource.Resource):
 
 
     def _renderPreHook(self, request, jsonParsed):
-        """
-        Called with:
-
-            POST /plugin HTTP/1.1
-            Content-type: application/json
-            Content-length: ...
-
-            {
-                Type: "pre-hook",
-                Method: "POST",
-                Request: "/v1.16/container/create",
-                Body: { ... } or null
-            }
-
-        Responds with:
-
-            HTTP 200 OK
-            Content-type: application/json
-
-            {
-                Method: "POST",
-                Request: "/v1.16/container/create",
-                Body: { ... } or null,
-            }
-
-        """
-        assert "Method" in jsonParsed
-        assert "Request" in jsonParsed
-        assert "Body" in jsonParsed
-        jsonParsed["Body"]["Number"] += self.incrementBy
+        jsonParsed["ModifiedClientRequest"]["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
-        return json.dumps(dict(Method="POST",
-                               Request="/something",
-                               Body=jsonParsed["Body"]))
+        return json.dumps({"PowerstripProtocolVersion": 1,
+                           "ModifiedClientRequest": {
+                               "Method": "POST", # XXX
+                               "Request": "/something", # XXX
+                               "Body": jsonParsed["ClientRequest"]["Body"]}})
 
 
     def _renderPostHook(self, request, jsonParsed):
-        """
-        Called with:
-
-            POST /plugin HTTP/1.1
-
-            {
-                Type: "post-hook",
-                OriginalClientMethod: "POST",
-                OriginalClientRequest: "/v1.16/containers/create",
-                OriginalClientBody: { ... },
-                DockerResponseContentType: "text/plain",
-                DockerResponseBody: { ... } (if application/json)
-                                    or "not found" (if text/plain)
-                                    or null (if it was a GET request),
-                DockerResponseCode: 404,
-            }
-
-        Responds with:
-
-            {
-                ContentType: "application/json",
-                Body: { ... },
-                Code: 200,
-            }
-        """
-        assert "OriginalClientMethod" in jsonParsed
-        assert "OriginalClientRequest" in jsonParsed
-        assert "OriginalClientBody" in jsonParsed
-        assert "DockerResponseContentType" in jsonParsed
-        jsonParsed["DockerResponseBody"]["Number"] += self.incrementBy
-        assert "DockerResponseCode" in jsonParsed
+        jsonParsed["ServerResponse"]["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
-        return json.dumps(dict(ContentType="application/json",
-                               Body=jsonParsed["DockerResponseBody"],
-                               Code=200))
+        return json.dumps({
+            "PowerstripProtocolVersion": 1,
+            "ModifiedServerResponse": {
+                "ContentType": "application/json", # XXX
+                "Body": jsonParsed["ServerResponse"]["Body"],
+                "Code": 200}}) # XXX
 
     def render_POST(self, request):
         """
