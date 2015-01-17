@@ -1,5 +1,5 @@
-Powerstrip: The missing Docker extensions API
-=============================================
+Powerstrip: A tool for prototyping Docker extensions
+====================================================
 
 At ClusterHQ we are participating in the ongoing effort in the Docker community to add an extensions API to Docker.
 You can join the effort at `#docker-extensions` on Freenode.
