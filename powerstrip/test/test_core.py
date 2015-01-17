@@ -276,6 +276,19 @@ plugins:
         d.addCallback(verify)
         return d
 
+    def test_endpoint_GET_args(self):
+        """
+        An endpoint is matched when it has ?-style GET arguments (and no JSON
+        body), and the GET request is passed through.
+        """
+        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
+        d = self.client.get('http://127.0.0.1:%d/info' % (self.proxyPort,))
+        def verify(response):
+            self.assertEqual(response.content.read(),
+                             "INFORMATION FOR YOU")
+        d.addCallback(verify)
+        return d
+
     def test_stream_endpoint_reject_post_hook(self):
         """
         A streaming (aka hijacking) endpoint like /attach is rejected if a
@@ -332,13 +345,6 @@ plugins:
         the previous.  Also content-type.
         """
     test_second_post_hook_gets_new_request_and_code.skip = "not implemented yet"
-
-    def test_endpoint_GET_args(self):
-        """
-        An endpoint is matched when it has ?-style GET arguments (and no JSON
-        body), and the GET request is passed through.
-        """
-    test_endpoint_GET_args.skip = "not implemented yet"
 
     def test_endpoint_globbing(self):
         """

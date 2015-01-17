@@ -18,10 +18,11 @@ class FakeDockerRoot(resource.Resource):
     isLeaf = False
     def __init__(self, **kw):
         resource.Resource.__init__(self)
-        self.putChild("towel", FakeDockerResource(**kw))
+        self.putChild("towel", FakeDockerTowelResource(**kw))
+        self.putChild("info", FakeDockerInfoResource(**kw))
 
 
-class FakeDockerResource(resource.Resource):
+class FakeDockerTowelResource(resource.Resource):
     isLeaf = True
 
     def __init__(self, rawStream=False, chunkedResponse=False):
@@ -46,6 +47,20 @@ class FakeDockerResource(resource.Resource):
         if self.chunkedResponse:
             request.setHeader("Content-Encoding", "chunked")
         return json.dumps(jsonParsed)
+
+
+class FakeDockerInfoResource(resource.Resource):
+    isLeaf = True
+
+    def __init__(self, **kw):
+        # disregard kwargs for now (they're used in TowelResource...)
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        """
+        Tell some information.
+        """
+        return "INFORMATION FOR YOU"
 
 
 class AdderPlugin(server.Site):
