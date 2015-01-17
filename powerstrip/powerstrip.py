@@ -194,19 +194,13 @@ class DockerProxy(proxy.ReverseProxyResource):
                 request.method, rest, request.clientproto,
                 request.getAllHeaders(), request.content.read(), request)
             self.reactor.connectTCP(self.host, self.port, clientFactory)
-            def debug(result):
-                return result
             d = defer.Deferred()
             clientFactory.onCreate(d)
-            d.addCallback(debug)
             return d
             ###########################
         d.addCallback(doneAllPrehooks)
         def inspect(client):
             d = defer.Deferred()
-            def debug(result):
-                return result
-            d.addCallback(debug)
             client.registerListener(d)
             return d
         d.addCallback(inspect)
