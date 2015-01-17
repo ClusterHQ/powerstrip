@@ -1,18 +1,18 @@
-Powerstrip: a tool to prototype Docker extensions
-=================================================
+Powerstrip: The missing Docker extensions API
+=============================================
 
 At ClusterHQ we are participating in the ongoing effort in the Docker community to add an extensions API to Docker.
 You can join the effort at `#docker-extensions` on Freenode.
 
 .. image:: powerstrip.jpg
 
-Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip hooks") into the same Docker daemon.
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip plugins") into the same Docker daemon.
 
-So for example you can have a storage hook coexist with a networking hook, playing nice with your choice of orchestration framework.
+So for example you can have a storage plugin coexist with a networking plugin, playing nice with your choice of orchestration framework.
 
 This enables **composition** of prototypes of `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
 
-This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical hooks into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
+This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical plugins into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 
 How it works
 ------------
@@ -21,7 +21,7 @@ Powerstrip does this by implementing chained blocking webhooks to arbitrary Dock
 
 This is inspired by https://github.com/docker/docker/issues/6982.
 
-*A note on nomenclature:* we are calling the things that plug into the powerstrip "hooks" because it works with the metaphor, and may help disambiguate Powerstrip **hooks** from the Docker **extensions** they are prototyping.
+*A note on nomenclature:* we are calling the things that plug into the powerstrip "plugins" because it works with the metaphor, and may help disambiguate Powerstrip **plugins** from the Docker **extensions** they are prototyping.
 
 
 Target audience
@@ -39,15 +39,15 @@ It should eventually be possible to run, for example, a Powerstrip-enabled Docke
 
     endpoints:
       "POST /*/containers/create":
-        # hooks are applied in list order
+        # plugins are applied in list order
         pre: [flocker, weave]
         post: [weave, flocker]
       "DELETE /*/containers/*":
         pre: [flocker, weave]
         post: [weave, flocker]
-    hooks:
-      flocker: http://flocker/flocker-hook
-      weave: http://flocker/weave-hook
+    plugins:
+      flocker: http://flocker/flocker-plugin
+      weave: http://flocker/weave-plugin
 
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
@@ -64,20 +64,20 @@ Portable volumes with powerstrip + flocker:
 Try it out
 ----------
 
-Powerstrip ships as a Docker image, and hooks can be any HTTP endpoint, including other linked Docker containers.
+Powerstrip ships as a Docker image, and plugins can be any HTTP endpoint, including other linked Docker containers.
 
-`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip hook (container) which adds a 1 second delay to all create commands.
+`Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip plugin (container) which adds a 1 second delay to all create commands.
 
 Try it out like this:
 
 .. code:: sh
 
     $ mkdir ~/powerstrip-demo
-    $ cat > ~/powerstrip-demo/hooks.yml <<EOF
+    $ cat > ~/powerstrip-demo/plugins.yml <<EOF
     endpoints:
       "/*/containers/create":
         pre: [slowreq]
-    hooks:
+    plugins:
       slowreq: http://slowreq/v1/extension
     EOF
 
@@ -86,7 +86,7 @@ Try it out like this:
                clusterhq/powerstrip-slowreq
     $ docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
-               -v ~/powerstrip-demo/hooks.yml:/etc/powerstrip/hooks.yml \
+               -v ~/powerstrip-demo/plugins.yml:/etc/powerstrip/plugins.yml \
                --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
                clusterhq/powerstrip
@@ -96,22 +96,22 @@ Try it out like this:
     $ docker run ubuntu echo hello
 
 
-Writing a hook
+Writing a plugin
 ----------------
 
-A hook is just a REST API with a single endpoint.
+A plugin is just a REST API with a single endpoint.
 Use your favourite framework and language to write it.
 
 
-Pre-hook hook endpoints receive POSTs like this
+Pre-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
-This gives the hook the opportunity to modify or delay the request.
+This gives the plugin the opportunity to modify or delay the request.
 
 .. code:: http
 
-    POST /hook HTTP/1.1
+    POST /plugin HTTP/1.1
     Content-type: application/json
     Content-length: ...
 
@@ -142,7 +142,7 @@ Alternatively, pre-hooks can respond with an HTTP error code, in which case the 
 Pre-hooks must not change the scope of which endpoint is being matched - rewriting the Request should only be used for modifying GET arguments (e.g. after a '?' in the URL).
 
 
-Post-hook hook endpoints receive POSTs like this
+Post-hook plugin endpoints receive POSTs like this
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Post-hooks get called after the response from Docker is complete but before it has been sent back to the client.
@@ -152,7 +152,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
 
 .. code::
 
-    POST /hook HTTP/1.1
+    POST /plugin HTTP/1.1
 
     {
         Type: "post-hook",
@@ -166,7 +166,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         DockerResponseCode: 404
     }
 
-The hook responds with:
+The plugin responds with:
 
 .. code::
 
@@ -185,7 +185,7 @@ Chaining
 Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
 If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought hook authors would like to know about Docker error messages.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought plugin authors would like to know about Docker error messages.
 
 
 Defining Endpoints
@@ -222,10 +222,10 @@ Recommended deployment
 
 For now, Powerstrip does not support TLS, but given that it should only be used for prototyping in local development environments, that's OK.
 
-It's recommended that hooks run in containers that are linked (with Docker links) to the proxy container.
+It's recommended that plugins run in containers that are linked (with Docker links) to the proxy container.
 Plugins should listen on port 80.
 
-Then you can just specify the URL using e.g. http://hook/, assuming "hook" is the link alias.
+Then you can just specify the URL using e.g. http://plugin/, assuming "plugin" is the link alias.
 (See example under "Try it out").
 
 
@@ -245,7 +245,7 @@ Here are some of them:
 
 * Client req => Plugin pre-hook returns OK => Docker => Plugin post-hook => Client response
 * Client req => Plugin pre-hook returns error code => error response to client (don't pass through request to Docker)
-* Client req => Plugin pre-hook => Docker => Error response from Docker to hook post-hook => Pass through error response to client
+* Client req => Plugin pre-hook => Docker => Error response from Docker to plugin post-hook => Pass through error response to client
 * Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
 
 
@@ -257,8 +257,8 @@ Pseudocode
     def postToPlugin(uri, jsonRequest):
         """
         returns a Deferred which fires with either:
-            * the responsecode and responsebody returned by the hook.
-            * a Failure object if the hook was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API).
+            * the responsecode and responsebody returned by the plugin.
+            * a Failure object if the plugin was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API).
         """
 
     def sendErrorToClient():
@@ -268,9 +268,9 @@ Pseudocode
     preHooks = [weave, flocker]
     def receive_req_from_client(method, request, body):
         d = defer.succeed(None)
-        for hook in preHooks:
+        for plugin in preHooks:
             # TODO probably actually implement this as a PreHookResponse object.
-            d.addCallback(postToPlugin, hook.uri, dict(
+            d.addCallback(postToPlugin, plugin.uri, dict(
                 Type="pre-hook",
                 Method=method,
                 Request=request,
@@ -281,9 +281,9 @@ Pseudocode
             # post-hooks get to learn about errors from docker, these do not bail out the pipeline
             return DockerErrorResponse(...)
         d.addErrback(dockerErrorHandler)
-        for hook in postHooks:
+        for plugin in postHooks:
             # TODO probably actually implement this as a PostHookResponse object.
-            d.addCallback(postToPlugin, hook.uri, dict(
+            d.addCallback(postToPlugin, plugin.uri, dict(
                 Type="post-hook",
                 OriginalClientMethod=method,
                 OriginalClientRequest=request,
@@ -299,7 +299,7 @@ Possible improvements
 =====================
 
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
-* Verbose logging (to stdout) as an optional argument/yaml configuration flag, to help hook authors debugging hooks.
+* Verbose logging (to stdout) as an optional argument/yaml configuration flag, to help plugin authors debugging plugins.
 * A public list of all known Powerstrip hooks.
 
 License
