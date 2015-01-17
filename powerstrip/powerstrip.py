@@ -175,7 +175,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                         "Type": "pre-hook",
                         "ClientRequest": {
                             "Method": request.method,
-                            "Request": request.method,
+                            "Request": request.uri,
                             "Body": newRequestBody,
                         }
                     }), headers={'Content-Type': ['application/json']})
@@ -250,7 +250,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
-            request.write(json.dumps(result["ModifiedServerResponse"]))
+            request.write(json.dumps(result["ModifiedServerResponse"]["Body"]))
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):
