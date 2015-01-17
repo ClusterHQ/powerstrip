@@ -8,6 +8,10 @@ from powerstrip.powerstrip import ServerProtocolFactory
 application = service.Application("Powerstrip")
 
 DOCKER_HOST = os.environ.get('DOCKER_HOST')
+if DOCKER_HOST is None:
+    # Default to assuming we've got a Docker socket bind-mounted into a
+    # container we're running in.
+    DOCKER_HOST = "unix:///var/run/docker.sock"
 if "://" not in DOCKER_HOST:
     DOCKER_HOST = "tcp://" + DOCKER_HOST
 if DOCKER_HOST.startswith("tcp://"):
