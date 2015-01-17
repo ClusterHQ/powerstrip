@@ -247,6 +247,7 @@ Contributing
 ------------
 
 We plan to do CI with from https://drone.io/ for unit tests.
+Or maybe Travis-CI.
 Integration tests will exist but only get run manually for now.
 
 
