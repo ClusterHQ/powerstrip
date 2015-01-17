@@ -273,6 +273,7 @@ Possible improvements
 * A public list of all known Powerstrip hooks (GitHub links + Docker Hub names).
 * Version the webhooks and the configuration.
 * Publish standard testing framework for adapters.
+* Expose headers as well as (instead of) just content-type. For both pre and post-hooks.
 
 License
 =======
