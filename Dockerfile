@@ -10,12 +10,11 @@ RUN         apt-get update && \
             apt-get -y install -q build-essential && \
             apt-get -y install -q python-dev libffi-dev libssl-dev python-pip
 
-# Install required python packages, and twisted
-RUN         pip install service_identity pycrypto && \
-            pip install twisted==14.0.0
-
 RUN         mkdir /app
 ADD         . /app
+
+# Install requirements from the project's requirements.txt
+RUN         pip install -r /app/requirements.txt
 
 WORKDIR     /app
 CMD         ["twistd", "-noy", "powerstrip.tac"]
