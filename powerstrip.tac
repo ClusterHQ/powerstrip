@@ -10,9 +10,13 @@ application = service.Application("Powerstrip")
 DOCKER_HOST = os.environ.get('DOCKER_HOST')
 if "://" not in DOCKER_HOST:
     DOCKER_HOST = "tcp://" + DOCKER_HOST
-parsed = urlparse(DOCKER_HOST)
-
-dockerAPI = ServerProtocolFactory(parsed.hostname, parsed.port)
+if DOCKER_HOST.startswith("tcp://"):
+    parsed = urlparse(DOCKER_HOST)
+    dockerAPI = ServerProtocolFactory(dockerAddr=parsed.hostname,
+        dockerPort=parsed.port)
+elif DOCKER_HOST.startswith("unix://"):
+    socketPath = DOCKER_HOST[len("unix://"):]
+    dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
 #logged = TrafficLoggingFactory(dockerAPI, "api-")
 dockerServer = internet.TCPServer(4243, dockerAPI, interface='0.0.0.0')
 dockerServer.setServiceParent(application)

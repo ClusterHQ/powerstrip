@@ -116,10 +116,13 @@ This gives the adapter the opportunity to modify or delay the request.
     Content-length: ...
 
     {
+        PowerstripProtocolVersion: 1,
         Type: "pre-hook",
-        Method: "POST",
-        Request: "/v1.16/container/create",
-        Body: { ... } or null
+        ClientRequest: {
+            Method: "POST",
+            Request: "/v1.16/container/create",
+            Body: { ... } or null
+        }
     }
 
 And they respond with:
@@ -130,9 +133,12 @@ And they respond with:
     Content-type: application/json
 
     {
-        Method: "POST",
-        Request: "/v1.16/container/create",
-        Body: { ... } or null
+        PowerstripProtocolVersion: 1,
+        ModifiedClientRequest: {
+            Method: "POST",
+            Request: "/v1.16/container/create",
+            Body: { ... } or null
+        }
     }
 
 So that, for example, they can rewrite a GET request string, or modify the JSON in a POST body.
@@ -155,15 +161,20 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
     POST /adapter HTTP/1.1
 
     {
+        PowerstripProtocolVersion: 1,
         Type: "post-hook",
-        OriginalClientMethod: "POST",
-        OriginalClientRequest: "/v1.16/containers/create",
-        OriginalClientBody: { ... },
-        DockerResponseContentType: "text/plain",
-        DockerResponseBody: { ... } (if application/json)
+        ClientRequest: {
+            Method: "POST",
+            Request: "/v1.16/containers/create",
+            Body: { ... }
+        }
+        ServerResponse: {
+            ContentType: "text/plain",
+            Body: { ... } (if application/json)
                             or "not found" (if text/plain)
                             or null (if it was a GET request),
-        DockerResponseCode: 404
+            ResponseCode: 404
+        }
     }
 
 The adapter responds with:
@@ -171,9 +182,12 @@ The adapter responds with:
 .. code::
 
     {
-        ContentType: "application/json",
-        Body: { ... },
-        Code: 200
+        PowerstripProtocolVersion: 1,
+        ModifiedResponse: {
+            ContentType: "application/json",
+            Body: { ... },
+            Code: 200
+        }
     }
 
 This gives the post-hook a chance to convert a Docker error into a success if it thinks it can.
@@ -248,59 +262,17 @@ Here are some of them:
 * Client req => Plugin pre-hook => Docker => Error response from Docker to adapter post-hook => Pass through error response to client
 * Client req => Plugin pre-hook => Docker => Plugin post-hook => error response to client
 
-
-Pseudocode
-----------
-
-.. code:: python
-
-    def postToPlugin(uri, jsonRequest):
-        """
-        returns a Deferred which fires with either:
-            * the responsecode and responsebody returned by the plugin.
-            * a Failure object if the plugin was (a) unreachable or (b) returned an HTTP error code (possibly because it wanted to prevent the request being passed through to the Docker API).
-        """
-
-    def sendErrorToClient():
-        pass
-
-    preHooks = [flocker, weave]
-    preHooks = [weave, flocker]
-    def receive_req_from_client(method, request, body):
-        d = defer.succeed(None)
-        for plugin in preHooks:
-            # TODO probably actually implement this as a PreHookResponse object.
-            d.addCallback(postToPlugin, plugin.uri, dict(
-                Type="pre-hook",
-                Method=method,
-                Request=request,
-                Body=body))
-        d.addCallback(passthruToDocker, ...)
-        d.addErrback(sendErrorToClient)
-        def dockerErrorHandler(reason):
-            # post-hooks get to learn about errors from docker, these do not bail out the pipeline
-            return DockerErrorResponse(...)
-        d.addErrback(dockerErrorHandler)
-        for plugin in postHooks:
-            # TODO probably actually implement this as a PostHookResponse object.
-            d.addCallback(postToPlugin, plugin.uri, dict(
-                Type="post-hook",
-                OriginalClientMethod=method,
-                OriginalClientRequest=request,
-                OriginalClientBody=body,
-                DockerResponseContentType=...,
-                DockerResponseBody=...,
-                DockerResponseCode=...))
-        d.addErrback(sendErrorToClient)
-        return d
-
-
 Possible improvements
 =====================
 
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
 * Verbose logging (to stdout) as an optional argument/yaml configuration flag, to help adapter authors debugging adapters.
-* A public list of all known Powerstrip hooks.
+
+  * Define the logging/traceability story (plugins and powerstrip log to stdout?).
+
+* A public list of all known Powerstrip hooks (GitHub links + Docker Hub names).
+* Version the webhooks and the configuration.
+* Publish standard testing framework for adapters.
 
 License
 =======

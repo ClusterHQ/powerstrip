@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web import server, proxy
 from twisted.web.client import Agent
+from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from urllib import quote as urlquote
 from zope.interface import directlyProvides
@@ -121,7 +122,7 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
 
-    def __init__(self, dockerAddr, dockerPort, path='', reactor=reactor, config=None):
+    def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None, path='', reactor=reactor, config=None):
         # XXX requires Docker to be run with -H 0.0.0.0:2375, shortcut to avoid
         # making ReverseProxyResource cope with UNIX sockets.
         if config is None:
@@ -131,7 +132,13 @@ class DockerProxy(proxy.ReverseProxyResource):
         else:
             self.config = config
         self.parser = EndpointParser(self.config)
-        proxy.ReverseProxyResource.__init__(self, dockerAddr, dockerPort, path, reactor)
+        Resource.__init__(self)
+        self.host = dockerAddr
+        self.port = dockerPort
+        self.socket = dockerSocket
+        self.path = path
+        self.reactor = reactor
+        proxy.ReverseProxyResource.__init__(self, dockerAddr, dockerPort, path, reactor) # NB dockerAddr is not actually used
         self.agent = Agent(reactor) # no connectionpool
         self.client = HTTPClient(self.agent)
 
@@ -179,11 +186,12 @@ class DockerProxy(proxy.ReverseProxyResource):
             # TODO get a reference to the deferred on the not-yet-existing
             # client.
             ###########################
-            if self.port == 80:
-                host = self.host
-            else:
-                host = "%s:%d" % (self.host, self.port)
-            request.requestHeaders.setRawHeaders(b"host", [host])
+            if not self.socket:
+                if self.port == 80:
+                    host = self.host
+                else:
+                    host = "%s:%d" % (self.host, self.port)
+                request.requestHeaders.setRawHeaders(b"host", [host])
             request.content.seek(0, 0)
             qs = urlparse.urlparse(request.uri)[4]
             if qs:
@@ -193,7 +201,10 @@ class DockerProxy(proxy.ReverseProxyResource):
             clientFactory = self.proxyClientFactoryClass(
                 request.method, rest, request.clientproto,
                 request.getAllHeaders(), request.content.read(), request)
-            self.reactor.connectTCP(self.host, self.port, clientFactory)
+            if self.socket:
+                self.reactor.connectUNIX(self.socket, clientFactory)
+            else:
+                self.reactor.connectTCP(self.host, self.port, clientFactory)
             d = defer.Deferred()
             clientFactory.onCreate(d)
             return d
@@ -239,7 +250,7 @@ class DockerProxy(proxy.ReverseProxyResource):
     def getChild(self, path, request):
         fragments = request.uri.split("/")
         fragments.pop(0)
-        proxyArgs = (self.host, self.port, self.path + '/' + urlquote(path, safe=""),
+        proxyArgs = (self.host, self.port, self.socket, self.path + '/' + urlquote(path, safe=""),
                      self.reactor)
         #if not request.postpath:
         resource = DockerProxy(*proxyArgs, config=self.config)
@@ -247,6 +258,6 @@ class DockerProxy(proxy.ReverseProxyResource):
 
 
 class ServerProtocolFactory(server.Site):
-    def __init__(self, dockerAddr, dockerPort, config=None):
-        self.root = DockerProxy(dockerAddr, dockerPort, config=config)
+    def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None, config=None):
+        self.root = DockerProxy(dockerAddr, dockerPort, dockerSocket, config=config)
         server.Site.__init__(self, self.root)

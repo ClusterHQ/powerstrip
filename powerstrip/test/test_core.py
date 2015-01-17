@@ -39,10 +39,14 @@ class ProxyTests(TestCase):
             shutdowns.append(self.adderTwoServer.stopListening())
         return defer.gatherResults(shutdowns)
 
-    def _configure(self, config_yml, dockerArgs={}):
+    def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False):
         self.dockerAPI = testtools.FakeDockerServer(**dockerArgs)
-        self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
-        self.dockerPort = self.dockerServer.getHost().port
+        if dockerOnSocket:
+            self.socketPath = self.mktemp()
+            self.dockerServer = reactor.listenUNIX(self.socketPath, self.dockerAPI)
+        else:
+            self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
+            self.dockerPort = self.dockerServer.getHost().port
 
         self.config = PluginConfiguration()
         tmp = self.mktemp()
@@ -51,9 +55,13 @@ class ProxyTests(TestCase):
         fp.setContent(config_yml)
         self.config.read_and_parse()
         self.parser = EndpointParser(self.config)
-        self.proxyAPI = powerstrip.ServerProtocolFactory(
-                dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
-                config=self.config)
+        if dockerOnSocket:
+            self.proxyAPI = powerstrip.ServerProtocolFactory(
+                    dockerSocket=self.socketPath, config=self.config)
+        else:
+            self.proxyAPI = powerstrip.ServerProtocolFactory(
+                    dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
+                    config=self.config)
         self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
 
@@ -65,6 +73,21 @@ class ProxyTests(TestCase):
         to see that we were seen by the (admittedly fake) Docker daemon.
         """
         self._configure("endpoints: {}\nplugins: {}")
+        d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
+                      json.dumps({"hiding": "things"}),
+                      headers={'Content-Type': ['application/json']})
+        d.addCallback(treq.json_content)
+        def verify(response):
+            self.assertEqual(response,
+                    {"hiding": "things", "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
+
+    def test_empty_endpoints_socket(self):
+        """
+        The proxy is able to connect to Docker on a UNIX socket.
+        """
+        self._configure("endpoints: {}\nplugins: {}", dockerOnSocket=True)
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"hiding": "things"}),
                       headers={'Content-Type': ['application/json']})
