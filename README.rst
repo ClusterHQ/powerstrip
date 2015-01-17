@@ -275,6 +275,8 @@ Possible improvements
 * Publish standard testing framework for adapters.
 * Expose headers as well as (instead of) just content-type.
   For both pre and post-hooks.
+* Run all the hooks in case of an error condition, do give them a chance to unwind things.
+* Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
 
 License
 =======
