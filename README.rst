@@ -44,12 +44,13 @@ It should eventually be possible to run a Powerstrip-enabled Docker Swarm with F
         post: [weave, flocker]
     plugins:
       flocker: http://flocker/flocker-plugin
-      weave: http://flocker/weave-plugin
+      weave: http://weave/weave-plugin
 
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
-But Powerstrip can be used to modify any Docker behavior at all.
+The Powerstrip configuration file can match any of the Docker API endpoints.
 
+This enables you to modify any of the Docker behaviors and means Powerstrip will adapt easily to future changes in the Docker HTTP api.
 
 Try it out
 ----------
@@ -193,6 +194,15 @@ The request ``POST /v1.16/container/create`` would be matched by all of the foll
 
 Note: Query arguments are stripped for matching purposes.
 
+Any of the Docker endpoints can be matched - so for example the following routes are perfectly valid:
+
+* ``POST /*/containers/create``
+* ``POST /*/containers/*/start``
+* ``POST /*/containers/*/stop``
+* ``POST /*/containers/*/kill``
+
+A useful resource when defining your endpoints is the `Docker remote API documentation <https://docs.docker.com/reference/api>`_
+
 Limitations
 -----------
 
@@ -287,6 +297,13 @@ Possible improvements
 =====================
 
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
+
+Plugin Ideas
+============
+
+* A post hook for containers => start that will block until the container is fully connected to the weave bridge
+* A pre hook for containers => create that will inject ENV variables loaded from `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_
+* A post hook for containers => {start,stop} that will update `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_ with the containers exposed endpoints
 
 License
 =======
