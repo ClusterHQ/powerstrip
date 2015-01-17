@@ -84,7 +84,7 @@ class AdderResource(resource.Resource):
 
 
     def _renderPreHook(self, request, jsonParsed):
-        jsonParsed["ModifiedClientRequest"]["Body"]["Number"] += self.incrementBy
+        jsonParsed["ClientRequest"]["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         return json.dumps({"PowerstripProtocolVersion": 1,
                            "ModifiedClientRequest": {

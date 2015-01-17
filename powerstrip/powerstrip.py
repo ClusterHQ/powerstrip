@@ -228,6 +228,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             # TODO differentiate between Docker response and previous plugin
             # response somehow...
             # TODO also handle Method and Request
+            serverResponse = result["ModifiedServerResponse"]
             return self.client.post(hookURL, json.dumps({
                         # TODO Write tests for the information provided to the plugin.
                         "PowerstripProtocolVersion": 1,
@@ -238,9 +239,9 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Body": originalRequestBody,
                             },
                         "ServerResponse": {
-                            "ContentType": result["ContentType"],
-                            "Body": result["Body"],
-                            "Code": result["Code"],
+                            "ContentType": serverResponse["ContentType"],
+                            "Body": serverResponse["Body"],
+                            "Code": serverResponse["Code"],
                         },
                     }), headers={'Content-Type': ['application/json']})
         for postHook in postHooks:
