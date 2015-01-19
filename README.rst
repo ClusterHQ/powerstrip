@@ -2,7 +2,7 @@ Powerstrip: A tool for prototyping Docker extensions
 ====================================================
 
 At ClusterHQ we are participating in the ongoing effort in the Docker community to add an extensions API to Docker.
-You can join the effort at `#docker-extensions` on Freenode.
+You can join the effort at ``#docker-extensions`` on Freenode.
 
 .. image:: powerstrip.jpg
 
@@ -121,7 +121,7 @@ This gives the adapter the opportunity to modify or delay the request.
         ClientRequest: {
             Method: "POST",
             Request: "/v1.16/container/create",
-            Body: { ... } or null
+            Body: "{ ... }" or null
         }
     }
 
@@ -137,7 +137,7 @@ And they respond with:
         ModifiedClientRequest: {
             Method: "POST",
             Request: "/v1.16/container/create",
-            Body: { ... } or null
+            Body: "{ ... }" or null
         }
     }
 
@@ -166,11 +166,11 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         ClientRequest: {
             Method: "POST",
             Request: "/v1.16/containers/create",
-            Body: { ... }
+            Body: "{ ... }"
         }
         ServerResponse: {
             ContentType: "text/plain",
-            Body: { ... } (if application/json)
+            Body: "{ ... }" (if application/json)
                             or "not found" (if text/plain)
                             or null (if it was a GET request),
             ResponseCode: 404
@@ -185,7 +185,7 @@ The adapter responds with:
         PowerstripProtocolVersion: 1,
         ModifiedServerResponse: {
             ContentType: "application/json",
-            Body: { ... },
+            Body: "{ ... }",
             Code: 200
         }
     }

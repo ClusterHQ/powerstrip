@@ -257,10 +257,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
-            if result["ModifiedServerResponse"]["ContentType"] == "application/json":
-                request.write(json.dumps(result["ModifiedServerResponse"]["Body"]))
-            else:
-                request.write(result["ModifiedServerResponse"]["Body"])
+            request.write(result["ModifiedServerResponse"]["Body"])
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):
