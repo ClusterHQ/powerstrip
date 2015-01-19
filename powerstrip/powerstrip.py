@@ -85,12 +85,17 @@ class DockerProxyClient(proxy.ProxyClient):
             else:
                 # TODO handle code, content-type; handle non-JSON
                 # content-types.
+                contentType = self.father.responseHeaders.getRawHeaders("content-type")
+                if contentType == ["application/json"]:
+                    body = json.loads(self._responsePartBuffer),
+                else:
+                    body = self._responsePartBuffer
                 self._fireListener(
                         {"PowerstripProtocolVersion": 1,
                          "ModifiedServerResponse":
-                            {"Body": json.loads(self._responsePartBuffer),
-                             "Code": -1,
-                             "ContentType": "elves"}})
+                            {"Body": body,
+                             "Code": self.father.code,
+                             "ContentType": contentType[0]}})
         else:
             self.father.transport.loseConnection()
 
@@ -252,7 +257,10 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
-            request.write(json.dumps(result["ModifiedServerResponse"]["Body"]))
+            if result["ModifiedServerResponse"]["ContentType"] == "application/json":
+                request.write(json.dumps(result["ModifiedServerResponse"]["Body"]))
+            else:
+                request.write(result["ModifiedServerResponse"]["Body"])
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):

@@ -286,8 +286,9 @@ plugins:
         """
         self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
         d = self.client.get('http://127.0.0.1:%d/info' % (self.proxyPort,))
+        d.addCallback(treq.content)
         def verify(response):
-            self.assertEqual(response.content.read(),
+            self.assertEqual(response,
                              "INFORMATION FOR YOU")
         d.addCallback(verify)
         return d
