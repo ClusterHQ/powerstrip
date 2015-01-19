@@ -89,6 +89,7 @@ class AdderResource(resource.Resource):
         request.setHeader("Content-Type", "application/json")
         # TODO: Don't decode the JSON, probably. Or, special-case Content-Type
         # logic everywhere.
+        import pdb; pdb.set_trace()
         return json.dumps({"PowerstripProtocolVersion": 1,
                            "ModifiedClientRequest": {
                                "Method": jsonParsed["ClientRequest"]["Method"],
@@ -105,7 +106,7 @@ class AdderResource(resource.Resource):
             "ModifiedServerResponse": {
                 "ContentType": jsonParsed["ServerResponse"]["ContentType"],
                 "Body": json.dumps(parsedBody),
-                "Code": parsedBody["ServerResponse"]["Code"]}})
+                "Code": jsonParsed["ServerResponse"]["Code"]}})
 
     def render_POST(self, request):
         """

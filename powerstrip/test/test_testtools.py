@@ -74,10 +74,12 @@ class TestAdderPlugin(TestCase):
         self._getAdder(pre=True)
         d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
                       json.dumps({
+                          "PowerstripProtocolVersion": 1,
                           "Type": "pre-hook",
-                          "Method": "POST",
-                          "Request": "/fictional",
-                          "Body": {"Number": 7}}),
+                          "ClientRequest": {
+                              "Method": "POST",
+                              "Request": "/fictional",
+                              "Body": {"Number": 7}}}),
                       headers={'Content-Type': ['application/json']})
         def verifyResponseCode(response):
             self.assertEqual(response.code, 200)
@@ -85,7 +87,7 @@ class TestAdderPlugin(TestCase):
         d.addCallback(verifyResponseCode)
         d.addCallback(treq.json_content)
         def verify(body):
-            self.assertEqual(body["Body"]["Number"], 8)
+            self.assertEqual(body["ModifiedClientRequest"]["Body"]["Number"], 8)
         d.addCallback(verify)
         return d
 
@@ -98,12 +100,14 @@ class TestAdderPlugin(TestCase):
         d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
                       json.dumps({
                           "Type": "post-hook",
-                          "OriginalClientMethod": "POST",
-                          "OriginalClientRequest": "/fictional",
-                          "OriginalClientBody": {},
-                          "DockerResponseContentType": "application/json",
-                          "DockerResponseBody": {"Number": 7},
-                          "DockerResponseCode": 200,
+                          "ClientRequest": {
+                              "Method": "POST",
+                              "Request": "/fictional",
+                              "Body": {},},
+                          "ServerResponse": {
+                              "ContentType": "application/json",
+                              "Body": {"Number": 7},
+                              "Code": 200,},
                           }),
                       headers={'Content-Type': ['application/json']})
         def verifyResponseCode(response):

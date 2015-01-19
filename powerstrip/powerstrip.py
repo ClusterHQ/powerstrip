@@ -86,10 +86,7 @@ class DockerProxyClient(proxy.ProxyClient):
                 # TODO handle code, content-type; handle non-JSON
                 # content-types.
                 contentType = self.father.responseHeaders.getRawHeaders("content-type")
-                if contentType == ["application/json"]:
-                    body = json.loads(self._responsePartBuffer),
-                else:
-                    body = self._responsePartBuffer
+                body = self._responsePartBuffer
                 self._fireListener(
                         {"PowerstripProtocolVersion": 1,
                          "ModifiedServerResponse":
@@ -194,7 +191,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             # mutate request in-place in such a way that ReverseProxyResource
             # understands it.
             if result is not None:
-                requestBody = json.dumps(result["ModifiedClientRequest"]["Body"])
+                requestBody = result["ModifiedClientRequest"]["Body"].encode("utf-8")
                 request.content = StringIO.StringIO(requestBody)
                 request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
             # TODO get a reference to the deferred on the not-yet-existing
@@ -257,7 +254,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
             # Write the final response to the client.
-            request.write(result["ModifiedServerResponse"]["Body"])
+            request.write(result["ModifiedServerResponse"]["Body"].encode("utf-8"))
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):
