@@ -189,7 +189,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             # mutate request in-place in such a way that ReverseProxyResource
             # understands it.
             if result is not None:
-                requestBody = json.dumps(result["ModifiedClientRequest"])
+                requestBody = json.dumps(result["ModifiedClientRequest"]["Body"])
                 request.content = StringIO.StringIO(requestBody)
                 request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
             # TODO get a reference to the deferred on the not-yet-existing
