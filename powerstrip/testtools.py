@@ -84,26 +84,28 @@ class AdderResource(resource.Resource):
 
 
     def _renderPreHook(self, request, jsonParsed):
-        jsonParsed["ClientRequest"]["Body"]["Number"] += self.incrementBy
+        parsedBody = json.loads(jsonParsed["ClientRequest"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         # TODO: Don't decode the JSON, probably. Or, special-case Content-Type
         # logic everywhere.
         return json.dumps({"PowerstripProtocolVersion": 1,
                            "ModifiedClientRequest": {
-                               "Method": "POST", # XXX
-                               "Request": "/something", # XXX
-                               "Body": jsonParsed["ClientRequest"]["Body"]}})
+                               "Method": jsonParsed["ClientRequest"]["Method"],
+                               "Request": jsonParsed["ClientRequest"]["Request"],
+                               "Body": json.dumps(parsedBody)}})
 
 
     def _renderPostHook(self, request, jsonParsed):
-        jsonParsed["ServerResponse"]["Body"]["Number"] += self.incrementBy
+        parsedBody = json.loads(jsonParsed["ServerResponse"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         return json.dumps({
             "PowerstripProtocolVersion": 1,
             "ModifiedServerResponse": {
-                "ContentType": "application/json", # XXX
-                "Body": jsonParsed["ServerResponse"]["Body"],
-                "Code": 200}}) # XXX
+                "ContentType": jsonParsed["ServerResponse"]["ContentType"],
+                "Body": json.dumps(parsedBody),
+                "Code": parsedBody["ServerResponse"]["Code"]}})
 
     def render_POST(self, request):
         """

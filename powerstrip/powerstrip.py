@@ -155,7 +155,7 @@ class DockerProxy(proxy.ReverseProxyResource):
         # We are processing a leaf request.
         # Get the original request body from the client.
         if request.requestHeaders.getRawHeaders('content-type') == ["application/json"]:
-            originalRequestBody = json.loads(request.content.read())
+            originalRequestBody = request.content.read()
             request.content.seek(0) # hee hee
         else:
             originalRequestBody = None
