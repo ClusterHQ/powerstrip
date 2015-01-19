@@ -42,8 +42,7 @@ class ProxyTests(TestCase):
         return defer.gatherResults(shutdowns)
 
     def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False):
-        self.dockerAPI = testtools.FakeDockerServer(**dockerArgs)
-        TrafficLoggingFactory(self.dockerAPI, "docker-")
+        self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
         if dockerOnSocket:
             self.socketPath = self.mktemp()
             self.dockerServer = reactor.listenUNIX(self.socketPath, self.dockerAPI)
@@ -59,13 +58,13 @@ class ProxyTests(TestCase):
         self.config.read_and_parse()
         self.parser = EndpointParser(self.config)
         if dockerOnSocket:
-            self.proxyAPI = powerstrip.ServerProtocolFactory(
-                    dockerSocket=self.socketPath, config=self.config)
+            self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
+                    dockerSocket=self.socketPath, config=self.config), "proxy-")
         else:
-            self.proxyAPI = powerstrip.ServerProtocolFactory(
-                    dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
-                    config=self.config)
-        TrafficLoggingFactory(self.dockerAPI, "proxy-")
+            self.proxyAPI = TrafficLoggingFactory(
+                                powerstrip.ServerProtocolFactory(
+                                dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
+                                config=self.config), "proxy-")
         self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
 
@@ -124,15 +123,13 @@ plugins: {}""" % (endpoint,))
         return d
 
     def _getAdder(self, *args, **kw):
-        self.adderAPI = AdderPlugin(*args, **kw)
-        TrafficLoggingFactory(self.adderAPI, "adder-")
+        self.adderAPI = TrafficLoggingFactory(AdderPlugin(*args, **kw), "adder-")
         self.adderServer = reactor.listenTCP(0, self.adderAPI)
         self.adderPort = self.adderServer.getHost().port
 
     def _getAdderTwo(self, *args, **kw):
         kw["incrementBy"] = 2
-        self.adderTwoAPI = AdderPlugin(*args, **kw)
-        TrafficLoggingFactory(self.adderTwoAPI, "adder2-")
+        self.adderTwoAPI = TrafficLoggingFactory(AdderPlugin(*args, **kw), "adder2-")
         self.adderTwoServer = reactor.listenTCP(0, self.adderTwoAPI)
         self.adderTwoPort = self.adderTwoServer.getHost().port
 
