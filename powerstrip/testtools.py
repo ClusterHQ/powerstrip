@@ -86,6 +86,8 @@ class AdderResource(resource.Resource):
     def _renderPreHook(self, request, jsonParsed):
         jsonParsed["ClientRequest"]["Body"]["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
+        # TODO: Don't decode the JSON, probably. Or, special-case Content-Type
+        # logic everywhere.
         return json.dumps({"PowerstripProtocolVersion": 1,
                            "ModifiedClientRequest": {
                                "Method": "POST", # XXX
