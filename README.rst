@@ -55,12 +55,6 @@ The Powerstrip configuration file can match any of the Docker API endpoints.
 
 This enables you to modify any of the Docker behaviors and means Powerstrip will adapt easily to future changes in the Docker HTTP api.
 
-Demo
-----
-Portable volumes with powerstrip + flocker:
-
-<video demo>
-
 
 Try it out
 ----------
