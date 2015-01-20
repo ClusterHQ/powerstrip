@@ -79,7 +79,7 @@ class TestAdderPlugin(TestCase):
                           "ClientRequest": {
                               "Method": "POST",
                               "Request": "/fictional",
-                              "Body": {"Number": 7}}}),
+                              "Body": json.dumps({"Number": 7})}}),
                       headers={'Content-Type': ['application/json']})
         def verifyResponseCode(response):
             self.assertEqual(response.code, 200)
@@ -87,7 +87,7 @@ class TestAdderPlugin(TestCase):
         d.addCallback(verifyResponseCode)
         d.addCallback(treq.json_content)
         def verify(body):
-            self.assertEqual(body["ModifiedClientRequest"]["Body"]["Number"], 8)
+            self.assertEqual(json.loads(body["ModifiedClientRequest"]["Body"])["Number"], 8)
         d.addCallback(verify)
         return d
 
@@ -103,10 +103,10 @@ class TestAdderPlugin(TestCase):
                           "ClientRequest": {
                               "Method": "POST",
                               "Request": "/fictional",
-                              "Body": {},},
+                              "Body": json.dumps({}),},
                           "ServerResponse": {
                               "ContentType": "application/json",
-                              "Body": {"Number": 7},
+                              "Body": json.dumps({"Number": 7}),
                               "Code": 200,},
                           }),
                       headers={'Content-Type': ['application/json']})
@@ -116,6 +116,6 @@ class TestAdderPlugin(TestCase):
         d.addCallback(verifyResponseCode)
         d.addCallback(treq.json_content)
         def verify(body):
-            self.assertEqual(body["Body"]["Number"], 8)
+            self.assertEqual(json.loads(body["ModifiedServerResponse"]["Body"])["Number"], 8)
         d.addCallback(verify)
         return d
