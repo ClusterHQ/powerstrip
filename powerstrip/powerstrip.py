@@ -86,13 +86,17 @@ class DockerProxyClient(proxy.ProxyClient):
                 # TODO handle code, content-type; handle non-JSON
                 # content-types.
                 contentType = self.father.responseHeaders.getRawHeaders("content-type")
+                if contentType:
+                    contentType = contentType[0]
+                else:
+                    contentType = None
                 body = self._responsePartBuffer
                 self._fireListener(
                         {"PowerstripProtocolVersion": 1,
                          "ModifiedServerResponse":
                             {"Body": body,
                              "Code": self.father.code,
-                             "ContentType": contentType[0]}})
+                             "ContentType": contentType}})
         else:
             self.father.transport.loseConnection()
 
