@@ -168,7 +168,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
             Body: "{ ... }" (if application/json)
                             or "not found" (if text/plain)
                             or null (if it was a GET request),
-            ResponseCode: 404
+            Code: 404
         }
     }
 
