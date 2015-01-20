@@ -132,8 +132,6 @@ class DockerProxy(proxy.ReverseProxyResource):
 
     def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None,
             path='', reactor=reactor, config=None):
-        # XXX requires Docker to be run with -H 0.0.0.0:2375, shortcut to avoid
-        # making ReverseProxyResource cope with UNIX sockets.
         if config is None:
             # Try to get the configuration from the default place on the
             # filesystem.
@@ -189,6 +187,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             hookURL = self.config.plugin_uri(preHook)
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
+            # XXX Need to fail hard if we fail while trying to connect to a hook.
             d.addErrback(log.err, 'while processing pre-hooks')
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
