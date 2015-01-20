@@ -35,6 +35,8 @@ setup(
         "Twisted == 14.0.0",
         "PyYAML == 3.10",
         "treq == 0.2.1",
+        "service_identity",
+        "pycrypto",
         ],
     # Some "trove classifiers" which are relevant.
     classifiers=[
