@@ -285,11 +285,11 @@ plugins:
         body), and the GET request is passed through.
         """
         self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
-        d = self.client.get('http://127.0.0.1:%d/info' % (self.proxyPort,))
+        d = self.client.get('http://127.0.0.1:%d/info?return=fish' % (self.proxyPort,))
         d.addCallback(treq.content)
         def verify(response):
             self.assertEqual(response,
-                             "INFORMATION FOR YOU")
+                    "INFORMATION FOR YOU: fish")
         d.addCallback(verify)
         return d
 

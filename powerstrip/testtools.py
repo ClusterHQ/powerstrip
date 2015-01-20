@@ -60,7 +60,7 @@ class FakeDockerInfoResource(resource.Resource):
         """
         Tell some information.
         """
-        return "INFORMATION FOR YOU"
+        return "INFORMATION FOR YOU: %s" % (request.args["return"][0],)
 
 
 class AdderPlugin(server.Site):

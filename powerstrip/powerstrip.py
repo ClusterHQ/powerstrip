@@ -159,7 +159,7 @@ class DockerProxy(proxy.ReverseProxyResource):
         preHooks = []
         postHooks = []
         d = defer.succeed(None)
-        for endpoint in self.parser.match_endpoint(request.method, request.uri):
+        for endpoint in self.parser.match_endpoint(request.method, request.uri.split("?")[0]):
             # It's possible for a request to match multiple endpoint
             # definitions.  Order of matched endpoint is not defined in
             # that case.
