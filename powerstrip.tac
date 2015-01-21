@@ -22,7 +22,7 @@ elif DOCKER_HOST.startswith("unix://"):
     socketPath = DOCKER_HOST[len("unix://"):]
     dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
 #logged = TrafficLoggingFactory(dockerAPI, "api-")
-dockerServer = internet.TCPServer(4243, dockerAPI, interface='0.0.0.0')
+dockerServer = internet.TCPServer(2375, dockerAPI, interface='0.0.0.0')
 dockerServer.setServiceParent(application)
 
-print r'export DOCKER_HOST=tcp://localhost:4243'
+print r'export DOCKER_HOST=tcp://localhost:2375'
