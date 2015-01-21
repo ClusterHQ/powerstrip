@@ -43,6 +43,7 @@ It should eventually be possible to run, for example, a Powerstrip-enabled Docke
 
 .. code:: yaml
 
+    version: 1
     endpoints:
       "POST /*/containers/create":
         # adapters are applied in list order
