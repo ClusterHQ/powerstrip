@@ -233,7 +233,7 @@ Limitations
 
 Powerstrip does not support adding post-hooks for:
 
-* Content-encoding: chunked
+* Transfer-encoding: chunked
 * Content-type: application/vnd.docker.raw-stream
 
 Such response streams will be passed through unmodified from the Docker API.
