@@ -171,8 +171,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         }
         ServerResponse: {
             ContentType: "text/plain",
-            Body: "{ ... }" (if application/json)
-                            or "not found" (if text/plain)
+            Body: "{ ... }" response string
                             or null (if it was a GET request),
             Code: 404
         }
