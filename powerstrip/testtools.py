@@ -65,7 +65,7 @@ class FakeDockerInfoResource(resource.Resource):
 
 class AdderPlugin(server.Site):
     """
-    The first powerstrip plugin: a pre-hook and post-hook implementation of a
+    The first powerstrip adapter: a pre-hook and post-hook implementation of a
     simple adder which can optionally blow up on demand.
     """
     def __init__(self, pre=False, post=False, explode=False, incrementBy=1):
@@ -142,4 +142,4 @@ class AdderRoot(resource.Resource):
         self.explode = explode
         self.incrementBy = incrementBy
         resource.Resource.__init__(self)
-        self.putChild("plugin", AdderResource(self.pre, self.post, self.explode, self.incrementBy))
+        self.putChild("adapter", AdderResource(self.pre, self.post, self.explode, self.incrementBy))

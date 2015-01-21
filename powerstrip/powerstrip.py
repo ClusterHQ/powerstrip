@@ -165,9 +165,9 @@ class DockerProxy(proxy.ReverseProxyResource):
             # It's possible for a request to match multiple endpoint
             # definitions.  Order of matched endpoint is not defined in
             # that case.
-            plugins = self.config.endpoint(endpoint)
-            preHooks.extend(plugins.pre)
-            postHooks.extend(plugins.post)
+            adapters = self.config.endpoint(endpoint)
+            preHooks.extend(adapters.pre)
+            postHooks.extend(adapters.post)
         def callPreHook(result, hookURL):
             if result is None:
                 newRequestBody = originalRequestBody
@@ -184,7 +184,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                         }
                     }), headers={'Content-Type': ['application/json']})
         for preHook in preHooks:
-            hookURL = self.config.plugin_uri(preHook)
+            hookURL = self.config.adapter_uri(preHook)
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
             # XXX Need to fail hard if we fail while trying to connect to a hook.
@@ -232,12 +232,12 @@ class DockerProxy(proxy.ReverseProxyResource):
         # XXX Warning - mutating request could lead to odd results when we try
         # to reproduce the original client queries below.
         def callPostHook(result, hookURL):
-            # TODO differentiate between Docker response and previous plugin
+            # TODO differentiate between Docker response and previous adapter
             # response somehow...
             # TODO also handle Method and Request
             serverResponse = result["ModifiedServerResponse"]
             return self.client.post(hookURL, json.dumps({
-                        # TODO Write tests for the information provided to the plugin.
+                        # TODO Write tests for the information provided to the adapter.
                         "PowerstripProtocolVersion": 1,
                         "Type": "post-hook",
                         "ClientRequest": {
@@ -252,7 +252,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                         },
                     }), headers={'Content-Type': ['application/json']})
         for postHook in postHooks:
-            hookURL = self.config.plugin_uri(postHook)
+            hookURL = self.config.adapter_uri(postHook)
             d.addCallback(callPostHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):

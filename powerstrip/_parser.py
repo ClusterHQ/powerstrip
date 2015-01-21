@@ -11,7 +11,7 @@ class InvalidRequest(Exception):
 
 class EndpointParser(object):
     """
-    Translate incoming requests into chains of plugins.
+    Translate incoming requests into chains of adapters.
     """
 
     def __init__(self, config):
@@ -25,7 +25,7 @@ class EndpointParser(object):
         """
         Return a ``set`` of endpoint expressions which match the provided
             ``method`` and ``request``. The items in this set can be provided
-            to ``PluginConfiguration.endpoint`` to get the plugin
+            to ``PluginConfiguration.endpoint`` to get the adapter
             configuration.
 
         :param method: An HTTP method string, e.g. "GET" or "POST".
