@@ -101,7 +101,7 @@ Try it out like this:
 Writing a adapter
 ----------------
 
-A adapter is just a REST API with a single endpoint.
+A adapter is just a single HTTP POST API endpoint.
 Use your favourite framework and language to write it.
 
 
