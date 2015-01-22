@@ -68,7 +68,7 @@ class DockerProxyClient(proxy.ProxyClient):
                 "\r\n")
             self._streaming = True
             self._fireListener(Failure(NoPostHooks()))
-        if key.lower() == "content-encoding" and value == "chunked":
+        if key.lower() == "transfer-encoding" and value == "chunked":
             self._streaming = True
             self._fireListener(Failure(NoPostHooks()))
         return proxy.ProxyClient.handleHeader(self, key, value)
