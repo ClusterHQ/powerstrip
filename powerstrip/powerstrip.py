@@ -143,6 +143,11 @@ class DockerProxy(proxy.ReverseProxyResource):
 
     def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None,
             path='', reactor=reactor, config=None):
+        """
+        A docker proxy resource which knows how to connect to real Docker
+        daemon either via socket (dockerSocket specified) or address + port for
+        TCP connection (dockerAddr + dockerPort specified).
+        """
         if config is None:
             # Try to get the configuration from the default place on the
             # filesystem.
