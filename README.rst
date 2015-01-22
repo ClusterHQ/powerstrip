@@ -12,7 +12,7 @@ Enter Powerstrip.
 What is it?
 -----------
 
-Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip hooks") into the same Docker daemon.
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip adapters") into the same Docker daemon.
 
 So for example you could have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
 
