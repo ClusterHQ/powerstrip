@@ -73,7 +73,9 @@ class DockerProxyClient(proxy.ProxyClient):
 
 
     def handleResponsePart(self, buffer):
-        # If we're not in streaming mode, buffer the (only) response part.
+        """
+        If we're not in streaming mode, buffer the response part(s).
+        """
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(self, buffer)
         else:
@@ -81,12 +83,19 @@ class DockerProxyClient(proxy.ProxyClient):
 
 
     def handleResponseEnd(self):
+        """
+        If we're completing a chunked response, up-call to handle it like a
+        regular reverse proxy.
+
+        If we're completing a non-chunked response, fire the post-hooks.
+
+        If we're completing a hijacked response, pass through the connection
+        close.
+        """
         if self.http:
             if self._streaming:
                 return proxy.ProxyClient.handleResponseEnd(self)
             else:
-                # TODO handle code, content-type; handle non-JSON
-                # content-types.
                 contentType = self.father.responseHeaders.getRawHeaders("content-type")
                 if contentType:
                     contentType = contentType[0]
