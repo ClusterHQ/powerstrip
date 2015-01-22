@@ -9,20 +9,27 @@ import json
 
 
 class FakeDockerServer(server.Site):
-    def __init__(self):
-        self.root = FakeDockerRoot()
+    def __init__(self, **kw):
+        self.root = FakeDockerRoot(**kw)
         server.Site.__init__(self, self.root)
-        
-        
+
+
 class FakeDockerRoot(resource.Resource):
     isLeaf = False
-    def __init__(self):
+    def __init__(self, **kw):
         resource.Resource.__init__(self)
-        self.putChild("towel", FakeDockerResource())
+        self.putChild("towel", FakeDockerTowelResource(**kw))
+        self.putChild("info", FakeDockerInfoResource(**kw))
 
 
-class FakeDockerResource(resource.Resource):
+class FakeDockerTowelResource(resource.Resource):
     isLeaf = True
+
+    def __init__(self, rawStream=False, chunkedResponse=False):
+        self.rawStream = rawStream
+        self.chunkedResponse = chunkedResponse
+        resource.Resource.__init__(self)
+
     def render_POST(self, request):
         """
         Take a JSON POST body, add an attribute to it "SeenByFakeDocker", then pass
@@ -33,102 +40,72 @@ class FakeDockerResource(resource.Resource):
         if "SeenByFakeDocker" in jsonParsed:
             raise Exception("already seen by a fake docker?!")
         jsonParsed["SeenByFakeDocker"] = 42
+        if not self.rawStream:
+            request.setHeader("Content-Type", "application/json")
+        else:
+            request.setHeader("Content-Type", "application/vnd.docker.raw-stream")
+        if self.chunkedResponse:
+            request.setHeader("Transfer-Encoding", "chunked")
         return json.dumps(jsonParsed)
+
+
+class FakeDockerInfoResource(resource.Resource):
+    isLeaf = True
+
+    def __init__(self, **kw):
+        # disregard kwargs for now (they're used in TowelResource...)
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        """
+        Tell some information.
+        """
+        return "INFORMATION FOR YOU: %s" % (request.args["return"][0],)
 
 
 class AdderPlugin(server.Site):
     """
-    The first powerstrip plugin: a pre-hook and post-hook implementation of a
+    The first powerstrip adapter: a pre-hook and post-hook implementation of a
     simple adder which can optionally blow up on demand.
     """
-    def __init__(self, pre=False, post=False, explode=False):
-        self.root = AdderRoot(pre, post, explode)
+    def __init__(self, pre=False, post=False, explode=False, incrementBy=1):
+        self.root = AdderRoot(pre, post, explode, incrementBy)
         server.Site.__init__(self, self.root)
 
 
 class AdderResource(resource.Resource):
     isLeaf = True
-    def __init__(self, pre, post, explode):
+    def __init__(self, pre, post, explode, incrementBy):
         self.pre = pre
         self.post = post
         self.explode = explode
+        self.incrementBy = incrementBy
         resource.Resource.__init__(self)
 
 
     def _renderPreHook(self, request, jsonParsed):
-        """
-        Called with:
-
-            POST /plugin HTTP/1.1
-            Content-type: application/json
-            Content-length: ...
-
-            {
-                Type: "pre-hook",
-                Method: "POST",
-                Request: "/v1.16/container/create",
-                Body: { ... } or null
-            }
-
-        Responds with:
-
-            HTTP 200 OK
-            Content-type: application/json
-
-            {
-                Method: "POST",
-                Request: "/v1.16/container/create",
-                Body: { ... } or null,
-            }
-
-        """
-        assert "Method" in jsonParsed
-        assert "Request" in jsonParsed
-        assert "Body" in jsonParsed
-        jsonParsed["Body"]["Number"] += 1
+        parsedBody = json.loads(jsonParsed["ClientRequest"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
-        return json.dumps(dict(Method="POST",
-                               Request="/something",
-                               Body=jsonParsed["Body"]))
+        # TODO: Don't decode the JSON, probably. Or, special-case Content-Type
+        # logic everywhere.
+        return json.dumps({"PowerstripProtocolVersion": 1,
+                           "ModifiedClientRequest": {
+                               "Method": jsonParsed["ClientRequest"]["Method"],
+                               "Request": jsonParsed["ClientRequest"]["Request"],
+                               "Body": json.dumps(parsedBody)}})
 
 
     def _renderPostHook(self, request, jsonParsed):
-        """
-        Called with:
-
-            POST /plugin HTTP/1.1
-
-            {
-                Type: "post-hook",
-                OriginalClientMethod: "POST",
-                OriginalClientRequest: "/v1.16/containers/create",
-                OriginalClientBody: { ... },
-                DockerResponseContentType: "text/plain",
-                DockerResponseBody: { ... } (if application/json)
-                                    or "not found" (if text/plain)
-                                    or null (if it was a GET request),
-                DockerResponseCode: 404,
-            }
-
-        Responds with:
-
-            {
-                ContentType: "application/json",
-                Body: { ... },
-                Code: 200,
-            }
-        """
-        assert "OriginalClientMethod" in jsonParsed
-        assert "OriginalClientRequest" in jsonParsed
-        assert "OriginalClientBody" in jsonParsed
-        assert "DockerResponseContentType" in jsonParsed
-        jsonParsed["DockerResponseBody"]["Number"] += 1
-        assert "DockerResponseCode" in jsonParsed
+        parsedBody = json.loads(jsonParsed["ServerResponse"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
-        return json.dumps(dict(ContentType="application/json",
-                               Body=jsonParsed["DockerResponseBody"],
-                               Code=200))
-
+        return json.dumps({
+            "PowerstripProtocolVersion": 1,
+            "ModifiedServerResponse": {
+                "ContentType": jsonParsed["ServerResponse"]["ContentType"],
+                "Body": json.dumps(parsedBody),
+                "Code": jsonParsed["ServerResponse"]["Code"]}})
 
     def render_POST(self, request):
         """
@@ -159,9 +136,10 @@ class AdderResource(resource.Resource):
 
 class AdderRoot(resource.Resource):
     isLeaf = False
-    def __init__(self, pre, post, explode):
+    def __init__(self, pre, post, explode, incrementBy):
         self.pre = pre
         self.post = post
         self.explode = explode
+        self.incrementBy = incrementBy
         resource.Resource.__init__(self)
-        self.putChild("plugin", AdderResource(self.pre, self.post, self.explode))
+        self.putChild("adapter", AdderResource(self.pre, self.post, self.explode, self.incrementBy))

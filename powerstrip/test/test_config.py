@@ -29,9 +29,9 @@ class PluginConfigurationTests(TestCase):
                     "post": ["weave", "flocker"],
                 },
             },
-            "plugins": {
-                "flocker": "http://flocker/flocker-plugin",
-                "weave": "http://weave/weave-plugin",
+            "adapters": {
+                "flocker": "http://flocker/flocker-adapter",
+                "weave": "http://weave/weave-adapter",
             },
         }
 
@@ -75,14 +75,14 @@ class PluginConfigurationTests(TestCase):
         except NoConfiguration, e:
             self.assertEquals(e.path, PluginConfiguration._default_file)
 
-    def test_parse_good_plugins(self):
+    def test_parse_good_adapters(self):
         """
-        ``_parse_plugins`` reads a valid datastructure and populates relevant
+        ``_parse_adapters`` reads a valid datastructure and populates relevant
         attirbutes on the class.
         """
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
 
-        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+        self.assertEquals((self.config._endpoints, self.config._adapters), ({
                 "POST /*/containers/create": {
                     "pre": ["flocker", "weave"],
                     "post": ["weave", "flocker"],
@@ -92,15 +92,15 @@ class PluginConfigurationTests(TestCase):
                     "post": ["weave", "flocker"],
                 },
             }, {
-                "flocker": "http://flocker/flocker-plugin",
-                "weave": "http://weave/weave-plugin",
+                "flocker": "http://flocker/flocker-adapter",
+                "weave": "http://weave/weave-adapter",
             }))
 
     def test_endpoints(self):
         """
         ``endpoints`` returns a ``set`` of configured endpoint expressions.
         """
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
         endpoints = self.config.endpoints()
         self.assertEquals(endpoints, set([
             "POST /*/containers/create",
@@ -111,7 +111,7 @@ class PluginConfigurationTests(TestCase):
         """
         ``endpoint`` returns the desired endpoint configuration.
         """
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
         self.assertEquals(endpoint_config, EndpointConfiguration(
                 pre=["flocker", "weave"],
@@ -122,31 +122,31 @@ class PluginConfigurationTests(TestCase):
         ``endpoint`` raises ``KeyError`` if the endpoint expression does not
         exist.
         """
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
         self.assertRaises(KeyError, self.config.endpoint, "POST /*/bogus/expression")
 
-    def test_plugins(self):
+    def test_adapters(self):
         """
-        ``plugins`` returns a ``set`` of configured plugins.
+        ``adapters`` returns a ``set`` of configured adapters.
         """
-        self.config._parse_plugins(self.good_config)
-        plugins = self.config.plugins()
-        self.assertEquals(plugins, set(["flocker", "weave"]))
+        self.config._parse_adapters(self.good_config)
+        adapters = self.config.adapters()
+        self.assertEquals(adapters, set(["flocker", "weave"]))
 
-    def test_plugin_uri(self):
+    def test_adapter_uri(self):
         """
-        ``plugin_uri`` returns the URI for a configured plugin.
+        ``adapter_uri`` returns the URI for a configured adapter.
         """
-        self.config._parse_plugins(self.good_config)
-        uri = self.config.plugin_uri("flocker")
-        self.assertEquals(uri, "http://flocker/flocker-plugin")
+        self.config._parse_adapters(self.good_config)
+        uri = self.config.adapter_uri("flocker")
+        self.assertEquals(uri, "http://flocker/flocker-adapter")
 
-    def test_plugin_uri_error(self):
+    def test_adapter_uri_error(self):
         """
-        ``plugin_uri`` returns the URI for a configured plugin.
+        ``adapter_uri`` returns the URI for a configured adapter.
         """
-        self.config._parse_plugins(self.good_config)
-        self.assertRaises(KeyError, self.config.plugin_uri, "bad_plugin")
+        self.config._parse_adapters(self.good_config)
+        self.assertRaises(KeyError, self.config.adapter_uri, "bad_adapter")
 
 
 class ReadAndParseTests(TestCase):
@@ -162,16 +162,16 @@ class ReadAndParseTests(TestCase):
         Running for the first time successfully reads and parses the configuration.
         """
         yml = """endpoints:
-  # plugins are applied in order
+  # adapters are applied in order
   "POST /*/containers/create":
     pre: [flocker, weave]
     post: [weave, flocker]
   "DELETE /*/containers/*":
     pre: [flocker, weave]
     post: [weave, flocker]
-plugins:
-  flocker: http://flocker/flocker-plugin
-  weave: http://weave/weave-plugin"""
+adapters:
+  flocker: http://flocker/flocker-adapter
+  weave: http://weave/weave-adapter"""
         tmp = self.mktemp()
         self.config._default_file = tmp
         fp = FilePath(tmp)
@@ -179,7 +179,7 @@ plugins:
         
         self.config.read_and_parse()
 
-        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+        self.assertEquals((self.config._endpoints, self.config._adapters), ({
                 "POST /*/containers/create": {
                     "pre": ["flocker", "weave"],
                     "post": ["weave", "flocker"],
@@ -189,8 +189,8 @@ plugins:
                     "post": ["weave", "flocker"],
                 },
             }, {
-                "flocker": "http://flocker/flocker-plugin",
-                "weave": "http://weave/weave-plugin",
+                "flocker": "http://flocker/flocker-adapter",
+                "weave": "http://weave/weave-adapter",
             }))
 
     def test_no_config(self):
@@ -218,16 +218,16 @@ plugins:
         If the config is changed, the new config is reflected.
         """
         yml = """endpoints:
-  # plugins are applied in order
+  # adapters are applied in order
   "POST /*/containers/create":
     pre: [flocker, weave]
     post: [weave, flocker]
   "DELETE /*/containers/*":
     pre: [flocker, weave]
     post: [weave, flocker]
-plugins:
-  flocker: http://flocker/flocker-plugin
-  weave: http://weave/weave-plugin"""
+adapters:
+  flocker: http://flocker/flocker-adapter
+  weave: http://weave/weave-adapter"""
         tmp = self.mktemp()
         self.config._default_file = tmp
         fp = FilePath(tmp)
@@ -235,7 +235,7 @@ plugins:
         
         self.config.read_and_parse()
 
-        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+        self.assertEquals((self.config._endpoints, self.config._adapters), ({
                 "POST /*/containers/create": {
                     "pre": ["flocker", "weave"],
                     "post": ["weave", "flocker"],
@@ -245,16 +245,16 @@ plugins:
                     "post": ["weave", "flocker"],
                 },
             }, {
-                "flocker": "http://flocker/flocker-plugin",
-                "weave": "http://weave/weave-plugin",
+                "flocker": "http://flocker/flocker-adapter",
+                "weave": "http://weave/weave-adapter",
             }))
 
         yml = """endpoints:
-  # plugins are applied in order
+  # adapters are applied in order
   "POST /*/containers/stop":
     pre: [flocker]
-plugins:
-  flocker: http://flocker/flocker-plugin"""
+adapters:
+  flocker: http://flocker/flocker-adapter"""
         tmp = self.mktemp()
         self.config._default_file = tmp
         fp = FilePath(tmp)
@@ -262,19 +262,19 @@ plugins:
         
         self.config.read_and_parse()
 
-        self.assertEquals((self.config._endpoints, self.config._plugins), ({
+        self.assertEquals((self.config._endpoints, self.config._adapters), ({
                 "POST /*/containers/stop": {
                     "pre": ["flocker"],
                     "post": [],
                 },
             }, {
-                "flocker": "http://flocker/flocker-plugin",
+                "flocker": "http://flocker/flocker-adapter",
             }))
 
 
 class ConfigurationValidationTests(TestCase):
     """
-    Tests for validation in ``PluginConfiguration._parse_plugins``.
+    Tests for validation in ``PluginConfiguration._parse_adapters``.
     """
 
     def setUp(self):
@@ -290,48 +290,48 @@ class ConfigurationValidationTests(TestCase):
                     "post": ["weave", "flocker"],
                 },
             },
-            "plugins": {
-                "flocker": "http://flocker/flocker-plugin",
-                "weave": "http://weave/weave-plugin",
+            "adapters": {
+                "flocker": "http://flocker/flocker-adapter",
+                "weave": "http://weave/weave-adapter",
             },
         }
 
     def test_missing_endpoints(self):
         """
-        ``_parse_plugins`` raises ``InvalidConfiguration` when the endpoints
+        ``_parse_adapters`` raises ``InvalidConfiguration` when the endpoints
         key is missing.
         """
         del self.good_config['endpoints']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+        self.assertRaises(InvalidConfiguration, self.config._parse_adapters, self.good_config)
 
-    def test_missing_plugins(self):
+    def test_missing_adapters(self):
         """
-        ``_parse_plugins`` raises ``InvalidConfiguration` when the plugins
+        ``_parse_adapters`` raises ``InvalidConfiguration` when the adapters
         key is missing.
         """
-        del self.good_config['plugins']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+        del self.good_config['adapters']
+        self.assertRaises(InvalidConfiguration, self.config._parse_adapters, self.good_config)
 
     def test_unkown_endpoint_keys(self):
         """
         Keys except "pre" and "post" are invalid in endpoints.
         """
         self.good_config['endpoints']['POST /*/containers/create']['bad_key'] = "value"
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+        self.assertRaises(InvalidConfiguration, self.config._parse_adapters, self.good_config)
 
     def test_no_endpoint_keys(self):
         """
         One of "pre" or "post" is required in an endpoint configuration.
         """
         self.good_config['endpoints']['POST /*/containers/create'] = {}
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+        self.assertRaises(InvalidConfiguration, self.config._parse_adapters, self.good_config)
 
     def test_optional_pre(self):
         """
         ``pre`` is an optional configuration key.
         """
         del self.good_config['endpoints']['POST /*/containers/create']['pre']
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
         self.assertEquals(endpoint_config.pre, [])
         
@@ -340,16 +340,16 @@ class ConfigurationValidationTests(TestCase):
         ``post`` is an optional configuration key.
         """
         del self.good_config['endpoints']['POST /*/containers/create']['post']
-        self.config._parse_plugins(self.good_config)
+        self.config._parse_adapters(self.good_config)
         endpoint_config = self.config.endpoint("POST /*/containers/create")
         self.assertEquals(endpoint_config.post, [])
         
-    def test_missing_defined_plugins(self):
+    def test_missing_defined_adapters(self):
         """
-        If a plugin is referenced in an endpoint which does not exist, an ``InvalidConfiguration`` is raised.
+        If a adapter is referenced in an endpoint which does not exist, an ``InvalidConfiguration`` is raised.
         """
-        del self.good_config['plugins']['flocker']
-        self.assertRaises(InvalidConfiguration, self.config._parse_plugins, self.good_config)
+        del self.good_config['adapters']['flocker']
+        self.assertRaises(InvalidConfiguration, self.config._parse_adapters, self.good_config)
 
 
 class EndpointConfigurationTests(TestCase):

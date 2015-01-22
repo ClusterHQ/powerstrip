@@ -5,17 +5,20 @@ FROM        ubuntu:14.04
 ENV         security_updates_as_of 2014-07-06
 
 # Install security updates and required packages
-RUN         apt-get update && \
-            apt-get -y upgrade && \
-            apt-get -y install -q build-essential && \
-            apt-get -y install -q python-dev libffi-dev libssl-dev python-pip
+RUN         apt-get -qy update
+RUN         apt-get -qy upgrade
+RUN         apt-get -qy install python-pip
+RUN         apt-get -qy install python-dev
+RUN         apt-get -qy install python-pyasn1
+RUN         apt-get -qy install libyaml-dev
+RUN         apt-get -qy install libffi-dev
+RUN         apt-get -qy install libssl-dev
 
-# Install required python packages, and twisted
-RUN         pip install service_identity pycrypto && \
-            pip install twisted==14.0.0
-
-RUN         mkdir /app
 ADD         . /app
 
 WORKDIR     /app
+
+# Install requirements from the project's setup.py
+RUN         python setup.py install
+
 CMD         ["twistd", "-noy", "powerstrip.tac"]
