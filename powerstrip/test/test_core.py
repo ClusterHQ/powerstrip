@@ -176,6 +176,11 @@ adapters:
     def test_adding_pre_hook_twice_adapter(self):
         """
         Chaining pre-hooks: adding twice means you get +2.
+
+        Note that the naming here is confusing. the adapter "adder2" here is
+        defined as being the **same adapter** as "adder", which increments by
+        1. In later tests, we use a different adder on "adderTwoPort" which
+        increments by 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
@@ -193,6 +198,10 @@ adapters:
     def test_adding_one_then_two_pre_hook_adapter(self):
         """
         Chaining pre-hooks: adding +1 and then +2 gives you +3.
+
+        Note that the naming here is confusing. the adapter "adder2" here is
+        defined as being a **different adapter** to "adder", which increments
+        by 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
@@ -272,10 +281,12 @@ adapters:
                       json.dumps({"chunked": "response"}),
                       headers={'Content-Type': ['application/json']})
         def verify(response):
-            self.assertEqual(response.headers.getRawHeaders("content-encoding"),
+            self.assertEqual(response.headers.getRawHeaders("transfer-encoding"),
                              ["chunked"])
         d.addCallback(verify)
         return d
+    test_chunked_endpoint.skip = ("Doesn't work yet. "
+            "Need a fake docker which can emit chunked encodings.")
 
     def test_endpoint_GET_args(self):
         """

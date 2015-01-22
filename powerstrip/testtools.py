@@ -45,7 +45,7 @@ class FakeDockerTowelResource(resource.Resource):
         else:
             request.setHeader("Content-Type", "application/vnd.docker.raw-stream")
         if self.chunkedResponse:
-            request.setHeader("Content-Encoding", "chunked")
+            request.setHeader("Transfer-Encoding", "chunked")
         return json.dumps(jsonParsed)
 
 
