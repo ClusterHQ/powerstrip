@@ -26,6 +26,10 @@ class DockerProxyClient(proxy.ProxyClient):
     """
     An HTTP proxy which knows how to break HTTP just right so that Docker
     stream (attach/events) API calls work.
+
+    self.http: A boolean which reflects whether the connection is in HTTP mode
+        (True) or "hijack" mode (False). See
+        https://docs.docker.com/reference/api/docker_remote_api_v1.14/#32-hijacking
     """
 
     http = True
