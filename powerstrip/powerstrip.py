@@ -244,11 +244,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             client.registerListener(d)
             return d
         d.addCallback(inspect)
-        # XXX Warning - mutating request could lead to odd results when we try
-        # to reproduce the original client queries below.
         def callPostHook(result, hookURL):
-            # TODO differentiate between Docker response and previous adapter
-            # response somehow...
             # TODO also handle Method and Request
             serverResponse = result["ModifiedServerResponse"]
             return self.client.post(hookURL, json.dumps({
