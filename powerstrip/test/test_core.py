@@ -158,9 +158,8 @@ adapters: {}""" % (endpoint,))
     def test_adding_pre_hook_adapter(self):
         """
         A adapter has a pre-hook which increments an integral field in the JSON
-        POST body called "Number".
-
-        TODO: Assert that Docker saw it, as well as that it came out the end.
+        POST body called "Number" which starts with value 1.  Calling that
+        pre-hook once increments the number to 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
