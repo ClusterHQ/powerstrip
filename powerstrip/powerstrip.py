@@ -138,6 +138,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             self.config = PluginConfiguration()
         else:
             self.config = config
+        self.config.read_and_parse()
         self.parser = EndpointParser(self.config)
         Resource.__init__(self)
         self.host = dockerAddr

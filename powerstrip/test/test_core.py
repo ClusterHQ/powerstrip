@@ -55,7 +55,6 @@ class ProxyTests(TestCase):
         self.config._default_file = tmp
         fp = FilePath(tmp)
         fp.setContent(config_yml)
-        self.config.read_and_parse()
         self.parser = EndpointParser(self.config)
         if dockerOnSocket:
             self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
