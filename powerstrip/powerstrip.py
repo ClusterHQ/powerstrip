@@ -43,8 +43,6 @@ class DockerProxyClient(proxy.ProxyClient):
             self._listener = None
             d.callback(result)
 
-    # TODO maybe call handlResponsePart and handleReponseEnd manually?
-
     def registerListener(self, d):
         """
         Register a one shot listener, which can fire either with:
