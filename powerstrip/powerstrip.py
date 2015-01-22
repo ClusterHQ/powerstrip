@@ -213,6 +213,8 @@ class DockerProxy(proxy.ReverseProxyResource):
                 request.content = StringIO.StringIO(requestBody)
                 request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
             ###########################
+            # The following code is copied from t.w.proxy.ReverseProxy so that
+            # clientFactory reference can be kept.
             if not self.socket:
                 if self.port == 80:
                     host = self.host
@@ -228,6 +230,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             clientFactory = self.proxyClientFactoryClass(
                 request.method, rest, request.clientproto,
                 request.getAllHeaders(), request.content.read(), request)
+            ###########################
             if self.socket:
                 self.reactor.connectUNIX(self.socket, clientFactory)
             else:
@@ -235,7 +238,6 @@ class DockerProxy(proxy.ReverseProxyResource):
             d = defer.Deferred()
             clientFactory.onCreate(d)
             return d
-            ###########################
         d.addCallback(doneAllPrehooks)
         def inspect(client):
             d = defer.Deferred()
