@@ -81,7 +81,7 @@ Try it out like this:
       "POST /*/containers/create":
         pre: [slowreq]
     adapters:
-      slowreq: http://slowreq/v1/extension
+      slowreq: http://slowreq/slowreq-adapter
     EOF
 
     $ docker run -d --name powerstrip-slowreq \
