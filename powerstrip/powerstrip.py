@@ -204,8 +204,6 @@ class DockerProxy(proxy.ReverseProxyResource):
             hookURL = self.config.adapter_uri(preHook)
             d.addCallback(callPreHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
-            # XXX Need to fail hard if we fail while trying to connect to a hook.
-            d.addErrback(log.err, 'while processing pre-hooks')
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
             # mutate request in-place in such a way that ReverseProxyResource
@@ -214,8 +212,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                 requestBody = result["ModifiedClientRequest"]["Body"].encode("utf-8")
                 request.content = StringIO.StringIO(requestBody)
                 request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
-            # TODO get a reference to the deferred on the not-yet-existing
-            # client.
             ###########################
             if not self.socket:
                 if self.port == 80:
