@@ -50,10 +50,10 @@ class TestAdderPlugin(TestCase):
 
     def test_adder_explode(self):
         """
-        The adder plugin blows up (sends an HTTP 500) when asked to.
+        The adder adapter blows up (sends an HTTP 500) when asked to.
         """
         self._getAdder(explode=True)
-        d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
+        d = self.client.post('http://127.0.0.1:%d/adapter' % (self.adderPort,),
                       json.dumps({}),
                       headers={'Content-Type': ['application/json']})
         def verifyResponseCode(response):
@@ -72,7 +72,7 @@ class TestAdderPlugin(TestCase):
         defined in the README.
         """
         self._getAdder(pre=True)
-        d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
+        d = self.client.post('http://127.0.0.1:%d/adapter' % (self.adderPort,),
                       json.dumps({
                           "PowerstripProtocolVersion": 1,
                           "Type": "pre-hook",
@@ -97,7 +97,7 @@ class TestAdderPlugin(TestCase):
         defined in the README.
         """
         self._getAdder(post=True)
-        d = self.client.post('http://127.0.0.1:%d/plugin' % (self.adderPort,),
+        d = self.client.post('http://127.0.0.1:%d/adapter' % (self.adderPort,),
                       json.dumps({
                           "Type": "post-hook",
                           "ClientRequest": {

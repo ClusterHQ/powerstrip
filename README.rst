@@ -4,11 +4,17 @@ Powerstrip: A tool for prototyping Docker extensions
 .. image:: powerstrip.jpg
 
 At ClusterHQ we are participating in the `ongoing effort in the Docker community to add an extensions API to Docker <https://clusterhq.com/blog/docker-extensions/>`_.
-(you can join this effort at `#docker-extensions` on Freenode).  While this work continues in the open, there is still a lot of interest from the community to start building extension prototypes today.  Enter Powerstrip.
+You can join this effort at ``#docker-extensions`` on Freenode.
 
-Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip hooks") into the same Docker daemon.
+While this work is ongoing there is interest from the community to start prototyping extensions today.
+Enter Powerstrip.
 
-So for example you can have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
+What is it?
+-----------
+
+Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip adapters") into the same Docker daemon.
+
+So for example you could have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
 
 This enables **composition** of prototypes of Docker extensions.
 
@@ -37,6 +43,7 @@ It should eventually be possible to run, for example, a Powerstrip-enabled Docke
 
 .. code:: yaml
 
+    version: 1
     endpoints:
       "POST /*/containers/create":
         # adapters are applied in list order
@@ -94,7 +101,7 @@ Try it out like this:
 Writing a adapter
 ----------------
 
-A adapter is just a REST API with a single endpoint.
+A adapter is just a single HTTP POST API endpoint.
 Use your favourite framework and language to write it.
 
 
@@ -165,8 +172,7 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         }
         ServerResponse: {
             ContentType: "text/plain",
-            Body: "{ ... }" (if application/json)
-                            or "not found" (if text/plain)
+            Body: "{ ... }" response string
                             or null (if it was a GET request),
             Code: 404
         }
@@ -194,7 +200,8 @@ Chaining
 Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
 If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought adapter authors would like to know about Docker error messages.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
+The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought adapter authors would like to know about Docker error messages.
 
 
 Defining Endpoints
@@ -226,7 +233,7 @@ Limitations
 
 Powerstrip does not support adding post-hooks for:
 
-* Content-encoding: chunked
+* Transfer-encoding: chunked
 * Content-type: application/vnd.docker.raw-stream
 
 Such response streams will be passed through unmodified from the Docker API.
