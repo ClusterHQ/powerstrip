@@ -76,6 +76,7 @@ Try it out like this:
 
     $ mkdir ~/powerstrip-demo
     $ cat > ~/powerstrip-demo/adapters.yml <<EOF
+    version: 1
     endpoints:
       "POST /*/containers/create":
         pre: [slowreq]
