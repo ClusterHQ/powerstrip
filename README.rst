@@ -16,7 +16,7 @@ Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets
 
 So for example you could have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
 
-This enables **composition** of prototypes of Docker extensions.
+Crucially for the community, this immediately enables **composition** of prototypes of Docker extensions.
 
 This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical adapters into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 
@@ -60,7 +60,7 @@ This example might allow an orchestration framework to move (reschedule) statefu
 
 The Powerstrip configuration file can match any of the Docker API endpoints.
 
-This enables you to modify any of the Docker behaviors and means Powerstrip will adapt easily to future changes in the Docker HTTP api.
+This enables you to modify any of the Docker behaviour and means Powerstrip will adapt easily to future changes in the Docker HTTP API.
 
 
 Try it out
@@ -111,7 +111,7 @@ Pre-hook adapter endpoints receive POSTs like this
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
 This gives the adapter the opportunity to modify or delay the request.
 
-.. code:: http
+.. code::
 
     POST /adapter HTTP/1.1
     Content-type: application/json
@@ -129,7 +129,7 @@ This gives the adapter the opportunity to modify or delay the request.
 
 And they respond with:
 
-.. code:: http
+.. code::
 
     HTTP 200 OK
     Content-type: application/json
