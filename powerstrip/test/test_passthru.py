@@ -54,6 +54,7 @@ def CompareDockerAndPowerstrip(test_case, cmd):
             test_case.assertEquals(docker_result, powerstrip_result)
 
         d.addCallback(compare_result, docker_result)
+        return d
 
     d.addCallback(got_result)
     return d
@@ -75,4 +76,4 @@ class BasicTests(TestCase):
         # XXX this will need to prime the Docker instance in most cases, e.g.
         # docker pull
         return CompareDockerAndPowerstrip(self,
-            "echo ls | docker run -i ubuntu")
+            "docker run -ti ubuntu echo hello")
