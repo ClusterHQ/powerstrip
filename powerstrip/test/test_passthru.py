@@ -22,7 +22,7 @@ $ sudo docker run --name powerstrip-test \
 
 import os
 
-from twisted.internet.utils import getProcessOuput
+from twisted.internet.utils import getProcessOutput
 from twisted.trial.unittest import TestCase
 
 def CompareDockerAndPowerstrip(test_case, cmd):
@@ -42,14 +42,14 @@ def CompareDockerAndPowerstrip(test_case, cmd):
     DOCKER = b"unix:///var/run/docker.sock"
     POWERSTRIP = b"tcp://powerstrip:2375"
 
-    d = getProcessOuput(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": DOCKER },
+    d = getProcessOutput(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": DOCKER },
         errortoo=True)
 
     def got_result(docker_result):
         if not docker_result:
             raise ValueError("Command did not produce any output went sent to "
                     "Docker daemon.")
-        d = getProcessOuput(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": POWERSTRIP },
+        d = getProcessOutput(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": POWERSTRIP },
             errortoo=True)
 
         def compare_result(powerstrip_result, docker_result):
