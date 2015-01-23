@@ -6,16 +6,18 @@ Powerstrip.
 
 Run these tests as so:
 
-$ docker run -d --name powerstrip \
+$ # For the blank_adapters.yml
+$ cd $POWERSTRIP_HOME/powerstrip/test
+$ sudo docker run -d --name powerstrip \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ./blank_adapters.yml:/etc/powerstrip/adapters.yml \
+    -v $PWD/blank_adapters.yml:/etc/powerstrip/adapters.yml \
     -p 2375:2375 \
     clusterhq/powerstrip:docker-compat-tests
-$ docker run --name powerstrip-test
+$ sudo docker run --name powerstrip-test \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -e TEST_PASSTHRU=1
-    --link powerstrip:powerstrip
-    clusterhq/powerstrip:docker-compat-tests tox powerstrip.test.test_passthru
+    -e TEST_PASSTHRU=1 \
+    --link powerstrip:powerstrip \
+    clusterhq/powerstrip:docker-compat-tests trial powerstrip.test.test_passthru
 """
 
 import os
