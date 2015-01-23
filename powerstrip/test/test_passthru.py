@@ -10,12 +10,12 @@ $ docker run -d --name powerstrip \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ./blank_adapters.yml:/etc/powerstrip/adapters.yml \
     -p 2375:2375 \
-    clusterhq/powerstrip
+    clusterhq/powerstrip:docker-compat-tests
 $ docker run --name powerstrip-test
     -v /var/run/docker.sock:/var/run/docker.sock \
     -e TEST_PASSTHRU=1
     --link powerstrip:powerstrip
-    clusterhq/powerstrip tox powerstrip.test.test_passthru
+    clusterhq/powerstrip:docker-compat-tests tox powerstrip.test.test_passthru
 """
 
 import os
