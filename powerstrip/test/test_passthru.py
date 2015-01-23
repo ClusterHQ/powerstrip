@@ -7,14 +7,15 @@ Powerstrip.
 Run these tests as so:
 
 $ docker run -d --name powerstrip \
-           -v /var/run/docker.sock:/var/run/docker.sock \
-           -v ./blank_adapters.yml:/etc/powerstrip/adapters.yml \
-           -p 2375:2375 \
-           clusterhq/powerstrip
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v ./blank_adapters.yml:/etc/powerstrip/adapters.yml \
+    -p 2375:2375 \
+    clusterhq/powerstrip
 $ docker run --name powerstrip-test
-           -v /var/run/docker.sock:/var/run/docker.sock \
-            --link powerstrip:powerstrip
-            clusterhq/powerstrip tox powerstrip.test.test_passthru
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -e TEST_PASSTHRU=1
+    --link powerstrip:powerstrip
+    clusterhq/powerstrip tox powerstrip.test.test_passthru
 """
 
 import os
