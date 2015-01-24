@@ -15,6 +15,7 @@ $ sudo docker run -d --name powerstrip \
     clusterhq/powerstrip:docker-compat-tests
 $ sudo docker run --name powerstrip-test \
     -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /usr/bin/docker:/usr/bin/docker \
     -e TEST_PASSTHRU=1 \
     --link powerstrip:powerstrip \
     clusterhq/powerstrip:docker-compat-tests trial powerstrip.test.test_passthru
@@ -53,6 +54,8 @@ def CompareDockerAndPowerstrip(test_case, cmd):
             errortoo=True)
 
         def compare_result(powerstrip_result, docker_result):
+            print "Got powerstrip result: %s" % (powerstrip_result,)
+            print "Got docker result: %s" % (docker_result,)
             test_case.assertEquals(docker_result, powerstrip_result)
 
         d.addCallback(compare_result, docker_result)
