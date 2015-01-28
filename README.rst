@@ -104,7 +104,7 @@ Powerstrip adapters
 ===================
 This is a list of current and upcoming Powerstrip adaptors.  Submit a pull request to add yours:
 
-* powerstrip-flocker: portable data volumes for Docker containers - Coming soon
+* powerstrip-flocker: portable data volumes for Docker containers - https://github.com/clusterhq/powerstrip-flocker
 * powerstrip-weave: use Weave for container networking - https://github.com/binocarlos/powerstrip-weave
 
 Read on for detailed info on writing your own adapter.
