@@ -9,12 +9,12 @@ You can join this effort at ``#docker-extensions`` on Freenode.
 While this work is ongoing there is interest from the community to start prototyping extensions today.
 Enter Powerstrip.
 
-What is it?
+What is Powerstrip?
 -----------
 
-Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip adapters") into the same Docker daemon.
+Powerstrip is implemented as a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extensions into the same Docker daemon.
 
-So for example you could have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
+For example, you can have a storage adapter (e.g. Flocker) running alongside a networking adapter (e.g. Weave), all playing nice with your choice of orchestration framework. 
 
 Crucially for the community, this immediately enables **composition** of prototypes of Docker extensions.
 
@@ -23,7 +23,7 @@ This is intended to allow quick prototyping, in order to figure out which integr
 How it works
 ------------
 
-Powerstrip does this by implementing chained blocking webhooks to arbitrary Docker API calls.
+Powerstrip works by implementing chained blocking webhooks to arbitrary Docker API calls.
 
 This is inspired by https://github.com/docker/docker/issues/6982.
 
@@ -34,6 +34,7 @@ Target audience
 ---------------
 
 The target audience of this project is folks to want to write Docker extensions, not end users.
+For a list of Powerstrip adaptors that you can use with Docker, see ShortAnchor_.
 
 
 Goal of project
@@ -99,8 +100,8 @@ Try it out like this (assuming logged into a Linux Docker host):
     $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
 
 
-Writing a adapter
-----------------
+Writing an adapter
+-----------------
 
 A adapter is just a single HTTP POST API endpoint.
 Use your favourite framework and language to write it.
@@ -257,6 +258,8 @@ Then you can just specify the URL using e.g. http://adapter/, assuming "adapter"
 
 Contributing
 ------------
+We'd love your help with Powerstrip.  
+If you have any questions or need help, besides filing a GitHub issue with feature requests or bug reports you can also join us on the #clusterhq channel on the irc.freenode.net IRC network. 
 
 We plan to do CI with from https://drone.io/ for unit tests.
 Or maybe Travis-CI.
@@ -291,8 +294,19 @@ Possible improvements
 * Run all the hooks in case of an error condition, do give them a chance to unwind things.
 * Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
 
-Plugin Ideas
-============
+.. _ShortAnchor:
+
+Powerstrip adapters
+===================
+This is a list of current or upcoming Powerstrip adaptors.  Submit a pull request to add yours
+
+* powerstrip-flocker; portable data volumes for Docker containers; Coming soon
+* powerstrip-weave; use Weave overlay network to network for containers; https://github.com/binocarlos/powerstrip-weave
+
+		
+
+Additional Adapter Ideas
+========================
 
 * A post hook for containers => start that will block until the container is fully connected to the weave bridge
 * A pre hook for containers => create that will inject ENV variables loaded from `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_
@@ -301,7 +315,7 @@ Plugin Ideas
 License
 =======
 
-Copyright 2015 ClusterHQ, Inc.
+Copyright 2015 ClusterHQ, Inc
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.  You may obtain a copy of the License at
 
