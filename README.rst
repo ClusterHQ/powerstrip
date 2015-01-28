@@ -103,10 +103,10 @@ Try it out like this (assuming logged into a Linux Docker host):
 
 Powerstrip adapters
 ===================
-This is a list of current or upcoming Powerstrip adaptors.  Submit a pull request to add yours:
+This is a list of current and upcoming Powerstrip adaptors.  Submit a pull request to add yours:
 
 * powerstrip-flocker; portable data volumes for Docker containers; Coming soon
-* powerstrip-weave; use Weave overlay network to network for containers; https://github.com/binocarlos/powerstrip-weave
+* powerstrip-weave; use Weave for container networking; https://github.com/binocarlos/powerstrip-weave
 
 Read on for detailed info on writing your own adapter.
 
