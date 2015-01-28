@@ -34,7 +34,7 @@ Target audience
 ---------------
 
 The target audience of this project is folks to want to write Docker extensions, not end users.
-For a list of Powerstrip adaptors that you can use with Docker, see ShortAnchor_.
+For a list of Powerstrip adaptors that you can use with Docker, see :ref:`powerstrip-adapters`.
 
 
 Goal of project
@@ -294,7 +294,7 @@ Possible improvements
 * Run all the hooks in case of an error condition, do give them a chance to unwind things.
 * Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
 
-.. _ShortAnchor:
+.. _powerstrip-adapters:
 
 Powerstrip adapters
 ===================
