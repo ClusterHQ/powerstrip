@@ -116,9 +116,7 @@ func applyPosthooks(resp *http.Response, req *http.Request, adaptors map[string]
 		dec := json.NewDecoder(hookResp.Body)
 		assert(dec.Decode(&posthookResponse))
 		assert(hookResp.Body.Close())
-		posthookRequest.ServerResponse.Body = posthookResponse.ModifiedServerResponse.Body
-		posthookRequest.ServerResponse.ContentType = posthookResponse.ModifiedServerResponse.ContentType
-		posthookRequest.ServerResponse.Code = posthookResponse.ModifiedServerResponse.Code
+		posthookRequest.ServerResponse = posthookResponse.ModifiedServerResponse
 	}
 	resp.Header.Set("Content-Type", posthookRequest.ServerResponse.ContentType)
 	resp.StatusCode = posthookRequest.ServerResponse.Code

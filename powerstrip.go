@@ -57,7 +57,7 @@ func main() {
 
 	adaptors := make(map[string]string)
 
-	// Look for plugin containers
+	// Look for adaptor containers
 	containers, err := docker.ListContainers(dockerapi.ListContainersOptions{})
 	assert(err)
 	for _, listing := range containers {
@@ -85,31 +85,28 @@ func main() {
 			defer conn.Close()
 
 			log.Println("reading request")
-			reqBuf := &bytes.Buffer{}
-			reqTee := bufio.NewReader(io.TeeReader(conn, reqBuf))
-			req, err := http.ReadRequest(reqTee)
+			req, err := http.ReadRequest(bufio.NewReader(conn))
 			assert(err)
 
 			log.Println("applying prehooks", adaptors)
 			body := applyPrehooks(req, adaptors)
-			reqBuf.Reset()
-			assert(req.Write(reqBuf))
 
+			log.Println("connecting and writing request")
 			server, err := net.Dial(dockerUri.Scheme, dockerUri.Path)
 			assert(err)
 			defer server.Close()
-			io.Copy(server, reqBuf)
+			req.Write(server)
 
 			log.Println("reading response")
-			headerBuf := &bytes.Buffer{}
-			respTee := bufio.NewReader(io.TeeReader(server, headerBuf))
+			headers := &bytes.Buffer{}
+			respTee := bufio.NewReader(io.TeeReader(server, headers))
 			resp, err := http.ReadResponse(respTee, req)
 			assert(err)
-			resp.Close = true
+			resp.Close = true // we only service one request per conn
 
 			if resp.Header.Get("Content-Type") == "application/vnd.docker.raw-stream" {
 				log.Println("proxying raw stream")
-				_, err := headerBuf.WriteTo(conn)
+				_, err := headers.WriteTo(conn)
 				assert(err)
 				done := make(chan struct{})
 				go func() {
