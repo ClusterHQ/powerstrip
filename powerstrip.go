@@ -1,11 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -14,42 +12,14 @@ import (
 	"strings"
 
 	dockerapi "github.com/fsouza/go-dockerclient"
-	"github.com/inconshreveable/go-vhost"
 )
 
-type ClientRequest struct {
-	Method  string
-	Request string
-	Body    string
-}
-
-type ServerResponse struct {
-	ContentType string
-	Body        *string
-	Code        int
-}
-
-type PreHookRequest struct {
-	PowerstripProtocolVersion int
-	Type                      string
-	ClientRequest             ClientRequest
-}
-
-type PreHookResponse struct {
-	PowerstripProtocolVersion int
-	ModifiedClientRequest     ClientRequest
-}
-
-type PostHookRequest struct {
-	PowerstripProtocolVersion int
-	Type                      string
-	ClientRequest             ClientRequest
-	ServerResponse            ServerResponse
-}
-
-type PostHookResponse struct {
-	PowerstripProtocolVersion int
-	ModifiedServerResponse    ServerResponse
+// abused throughout during development
+func assert(err error) {
+	if err != nil {
+		//log.Fatal(err)
+		panic(err)
+	}
 }
 
 func getopt(name, def string) string {
@@ -59,55 +29,16 @@ func getopt(name, def string) string {
 	return def
 }
 
-func assert(err error) {
-	if err != nil {
-		log.Fatal(err)
+func chunked(encodings []string) bool {
+	if encodings == nil {
+		return false
 	}
-}
-
-func proxyConn(conn *vhost.HTTPConn, backend net.Conn) {
-	defer conn.Close()
-	defer backend.Close()
-
-	done := make(chan struct{})
-	go func() {
-		io.Copy(backend, conn)
-		backend.(*net.UnixConn).CloseWrite()
-		close(done)
-	}()
-	io.Copy(conn, backend)
-	conn.Conn.(*net.TCPConn).CloseWrite()
-	<-done
-}
-
-func triggerPrehooks(adaptors map[string]string, req *http.Request) {
-	body, err := ioutil.ReadAll(req.Body)
-	req.Body.Close()
-	assert(err)
-	prehookRequest := &PostHookRequest{
-		Type: "pre-hook",
-		PowerstripProtocolVersion: 1,
-		ClientRequest: ClientRequest{
-			Method:  req.Method,
-			Request: req.RequestURI,
-			Body:    string(body),
-		},
+	for _, value := range encodings {
+		if value == "chunked" {
+			return true
+		}
 	}
-	var prehookResponse PreHookResponse
-	for _, addr := range adaptors {
-		var buf bytes.Buffer
-		enc := json.NewEncoder(&buf)
-		enc.Encode(prehookRequest)
-		resp, err := http.Post("http://"+addr+req.RequestURI, req.Header.Get("Content-Type"), &buf)
-		assert(err)
-		dec := json.NewDecoder(resp.Body)
-
-		assert(dec.Decode(&prehookResponse))
-		resp.Body.Close()
-		prehookRequest.ClientRequest.Body = prehookResponse.ModifiedClientRequest.Body
-		prehookRequest.ClientRequest.Request = prehookResponse.ModifiedClientRequest.Request
-	}
-
+	return false
 }
 
 func main() {
@@ -145,32 +76,61 @@ func main() {
 		}
 	}
 
-	fmt.Println(adaptors)
+	log.Println(adaptors)
 
 	for {
 		conn, err := listener.Accept()
-		if err != nil {
-			log.Fatal(err)
-		}
+		assert(err)
+		go func() {
+			defer conn.Close()
 
-		reqConn, _ := vhost.HTTP(conn)
-		fmt.Println(reqConn.Request)
+			log.Println("reading request")
+			reqBuf := &bytes.Buffer{}
+			reqTee := bufio.NewReader(io.TeeReader(conn, reqBuf))
+			req, err := http.ReadRequest(reqTee)
+			assert(err)
 
-		//triggerPrehooks(adaptors, reqConn.Request)
+			log.Println("applying prehooks", adaptors)
+			body := applyPrehooks(req, adaptors)
+			reqBuf.Reset()
+			assert(req.Write(reqBuf))
 
-		// write to resulting request buffer
-		// create buffered io.ReadWriteCloser than has input buffer,
-		// wraps original conn, and buffers response for posthooks
-		// buffered RWC needs explicit flush.
+			server, err := net.Dial(dockerUri.Scheme, dockerUri.Path)
+			assert(err)
+			defer server.Close()
+			io.Copy(server, reqBuf)
 
-		log.Println("proxy:", conn.RemoteAddr())
+			log.Println("reading response")
+			headerBuf := &bytes.Buffer{}
+			respTee := bufio.NewReader(io.TeeReader(server, headerBuf))
+			resp, err := http.ReadResponse(respTee, req)
+			assert(err)
+			resp.Close = true
 
-		backend, err := net.Dial(dockerUri.Scheme, dockerUri.Path)
-		if err != nil {
-			log.Println("error:", err.Error())
-		}
-
-		go proxyConn(reqConn, backend)
+			if resp.Header.Get("Content-Type") == "application/vnd.docker.raw-stream" {
+				log.Println("proxying raw stream")
+				_, err := headerBuf.WriteTo(conn)
+				assert(err)
+				done := make(chan struct{})
+				go func() {
+					io.Copy(conn, server)
+					conn.(*net.TCPConn).CloseWrite()
+					close(done)
+				}()
+				io.Copy(server, conn)
+				server.(*net.UnixConn).CloseWrite()
+				<-done
+			} else if chunked(resp.TransferEncoding) {
+				log.Println("proxying chunked stream")
+				assert(resp.Write(conn))
+				conn.(*net.TCPConn).CloseWrite()
+			} else {
+				log.Println("applying posthooks", adaptors)
+				applyPosthooks(resp, req, adaptors, body)
+				log.Println("flushing response")
+				assert(resp.Write(conn))
+			}
+		}()
 
 	}
 }
