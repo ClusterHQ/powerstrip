@@ -33,7 +33,7 @@ This is inspired by https://github.com/docker/docker/issues/6982.
 Target audience
 ---------------
 
-The target audience of this project is folks to want to write Docker extensions, not end users.
+The target audience of this project is folks who to want to write Docker extensions, not end users.
 For a list of Powerstrip adaptors that you can use with Docker, see :ref:`powerstrip-adapters`.
 
 
@@ -99,6 +99,16 @@ Try it out like this (assuming logged into a Linux Docker host):
     $ time sudo docker run ubuntu echo hello
     $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
 
+.. _powerstrip-adapters:
+
+Powerstrip adapters
+===================
+This is a list of current or upcoming Powerstrip adaptors.  Submit a pull request to add yours:
+
+* powerstrip-flocker; portable data volumes for Docker containers; Coming soon
+* powerstrip-weave; use Weave overlay network to network for containers; https://github.com/binocarlos/powerstrip-weave
+
+Read on for detailed info on writing your own adapter.
 
 Writing an adapter
 -----------------
@@ -293,16 +303,6 @@ Possible improvements
   For both pre and post-hooks.
 * Run all the hooks in case of an error condition, do give them a chance to unwind things.
 * Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
-
-.. _powerstrip-adapters:
-
-Powerstrip adapters
-===================
-This is a list of current or upcoming Powerstrip adaptors.  Submit a pull request to add yours
-
-* powerstrip-flocker; portable data volumes for Docker containers; Coming soon
-* powerstrip-weave; use Weave overlay network to network for containers; https://github.com/binocarlos/powerstrip-weave
-
 		
 
 Additional Adapter Ideas
