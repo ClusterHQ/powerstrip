@@ -12,7 +12,7 @@ Enter Powerstrip.
 What is Powerstrip?
 -----------
 
-Powerstrip is implemented as a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extensions into the same Docker daemon.
+Powerstrip is implemented as a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extension prototypes into the same Docker daemon.
 
 For example, you can have a storage adapter (e.g. Flocker) running alongside a networking adapter (e.g. Weave), all playing nice with your choice of orchestration framework. 
 
@@ -34,7 +34,7 @@ Target audience
 ---------------
 
 The target audience of this project is folks who to want to write Docker extensions, not end users.
-For a list of Powerstrip adaptors that you can use with Docker, see :ref:`powerstrip-adapters`.
+See the Powerstrip adapters section below for a list of adapters that you can use with Docker.
 
 
 Goal of project
@@ -99,14 +99,13 @@ Try it out like this (assuming logged into a Linux Docker host):
     $ time sudo docker run ubuntu echo hello
     $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
 
-.. _powerstrip-adapters:
 
 Powerstrip adapters
 ===================
 This is a list of current and upcoming Powerstrip adaptors.  Submit a pull request to add yours:
 
-* powerstrip-flocker; portable data volumes for Docker containers; Coming soon
-* powerstrip-weave; use Weave for container networking; https://github.com/binocarlos/powerstrip-weave
+* powerstrip-flocker: portable data volumes for Docker containers - Coming soon
+* powerstrip-weave: use Weave for container networking - https://github.com/binocarlos/powerstrip-weave
 
 Read on for detailed info on writing your own adapter.
 
@@ -269,7 +268,7 @@ Then you can just specify the URL using e.g. http://adapter/, assuming "adapter"
 Contributing
 ------------
 We'd love your help with Powerstrip.  
-If you have any questions or need help, besides filing a GitHub issue with feature requests or bug reports you can also join us on the #clusterhq channel on the irc.freenode.net IRC network. 
+If you have any questions or need help, besides filing a GitHub issue with feature requests or bug reports you can also join us on the #clusterhq or #docker-extensions channel on the irc.freenode.net IRC network. 
 
 We plan to do CI with from https://drone.io/ for unit tests.
 Or maybe Travis-CI.
