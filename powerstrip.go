@@ -11,14 +11,24 @@ import (
 	"os"
 	"strings"
 
+	"code.google.com/p/go-uuid/uuid"
 	dockerapi "github.com/fsouza/go-dockerclient"
 )
+
+var Version string
+var DebugMode bool
 
 // abused throughout during development
 func assert(err error) {
 	if err != nil {
 		//log.Fatal(err)
 		panic(err)
+	}
+}
+
+func debug(v ...interface{}) {
+	if DebugMode {
+		log.Println(v...)
 	}
 }
 
@@ -42,6 +52,7 @@ func chunked(encodings []string) bool {
 }
 
 func main() {
+	DebugMode = (getopt("DEBUG", "") != "")
 	port := getopt("PORT", "2375")
 	dockerHost := getopt("DOCKER_HOST", "unix:///var/run/docker.sock")
 	dockerUri, err := url.Parse(dockerHost)
@@ -53,11 +64,11 @@ func main() {
 	listener, err := net.Listen("tcp", ":"+port)
 	assert(err)
 
-	log.Println("listening on", port, "using", dockerHost, "...")
+	log.Println("powerstrip", Version, "listening on", port, "using", dockerHost, "...")
 
-	adaptors := make(map[string]string)
+	adapters := make(map[string]string)
 
-	// Look for adaptor containers
+	// Look for adapter containers
 	containers, err := docker.ListContainers(dockerapi.ListContainersOptions{})
 	assert(err)
 	for _, listing := range containers {
@@ -65,10 +76,10 @@ func main() {
 		assert(err)
 		for _, env := range container.Config.Env {
 			kvp := strings.SplitN(env, "=", 2)
-			if kvp[0] == "POWERSTRIP_ADAPTOR" {
+			if kvp[0] == "POWERSTRIP_ADAPTER" {
 				for ep, _ := range container.Config.ExposedPorts {
 					port := strings.SplitN(string(ep), "/", 2)
-					adaptors[kvp[1]] = net.JoinHostPort(container.NetworkSettings.IPAddress, port[0])
+					adapters[kvp[1]] = net.JoinHostPort(container.NetworkSettings.IPAddress, port[0])
 					break
 				}
 				break
@@ -76,28 +87,29 @@ func main() {
 		}
 	}
 
-	log.Println(adaptors)
+	log.Println(adapters)
 
 	for {
 		conn, err := listener.Accept()
 		assert(err)
 		go func() {
 			defer conn.Close()
+			reqId := strings.SplitN(uuid.New(), "-", 2)[0]
 
-			log.Println("reading request")
+			debug(reqId, "reading request")
 			req, err := http.ReadRequest(bufio.NewReader(conn))
 			assert(err)
 
-			log.Println("applying prehooks", adaptors)
-			body := applyPrehooks(req, adaptors)
+			debug(reqId, "applying prehooks", adapters)
+			body := applyPrehooks(req, adapters)
 
-			log.Println("connecting and writing request")
+			debug(reqId, "connecting and writing request")
 			server, err := net.Dial(dockerUri.Scheme, dockerUri.Path)
 			assert(err)
 			defer server.Close()
 			req.Write(server)
 
-			log.Println("reading response")
+			debug(reqId, "reading response")
 			headers := &bytes.Buffer{}
 			respTee := bufio.NewReader(io.TeeReader(server, headers))
 			resp, err := http.ReadResponse(respTee, req)
@@ -105,7 +117,7 @@ func main() {
 			resp.Close = true // we only service one request per conn
 
 			if resp.Header.Get("Content-Type") == "application/vnd.docker.raw-stream" {
-				log.Println("proxying raw stream")
+				debug(reqId, "proxying raw stream")
 				_, err := headers.WriteTo(conn)
 				assert(err)
 				done := make(chan struct{})
@@ -118,13 +130,13 @@ func main() {
 				server.(*net.UnixConn).CloseWrite()
 				<-done
 			} else if chunked(resp.TransferEncoding) {
-				log.Println("proxying chunked stream")
+				debug(reqId, "proxying chunked stream")
 				assert(resp.Write(conn))
 				conn.(*net.TCPConn).CloseWrite()
 			} else {
-				log.Println("applying posthooks", adaptors)
-				applyPosthooks(resp, req, adaptors, body)
-				log.Println("flushing response")
+				debug(reqId, "applying posthooks", adapters)
+				applyPosthooks(resp, req, adapters, body)
+				debug(reqId, "flushing response")
 				assert(resp.Write(conn))
 			}
 		}()
