@@ -44,10 +44,10 @@ test-no-adapters-run() {
 	in-testbed() {
 		start-powerstrip
 		export DOCKER_HOST=unix:///var/run/docker.sock
-		before="$(echo "hello" | docker run --rm -i gliderlabs/alpine /bin/sh -c 'cat')"
+		before="$(echo "hello" | docker run $RMFLAG -i gliderlabs/alpine /bin/sh -c 'cat')"
 		[[ "$before" = "hello" ]]
 		export DOCKER_HOST=tcp://localhost:2375
-		after="$(echo "hello" | docker run --rm -i gliderlabs/alpine /bin/sh -c 'cat')"
+		after="$(echo "hello" | docker run $RMFLAG -i gliderlabs/alpine /bin/sh -c 'cat')"
 		[[ "$after" = "hello" ]]
 	}
 	use-testbed $FUNCNAME

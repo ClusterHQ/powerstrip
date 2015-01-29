@@ -1,13 +1,18 @@
 machine:
+  environment:
+    GOROOT:
   services:
     - docker
 
 dependencies:
+  cache_directories:
+    - go
   pre:
+    - bash tests/util/circleci/ensure-go.sh
     - docker version
-    - make deps
+    - PATH=$PWD/go/bin:$PATH make deps
   override:
-    - make build
+    - PATH=$PWD/go/bin:$PATH make build
 
 test:
   override:

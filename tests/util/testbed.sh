@@ -2,6 +2,12 @@
 # helpers around testbed image for powerstrip.
 # avoid names starting with "test" so shunit2 doesnt use them.
 
+if [[ "$CI" ]]; then
+	export RMFLAG=""
+else
+	export RMFLAG="--rm"
+fi
+
 # use this if you want to write testbed
 # tests in functions instead of strings.
 fn-source() {
@@ -25,10 +31,12 @@ use-testbed() {
 	}
 	check-testbed || make testbed
 	check-inspect || make inspect
-	docker run $([[ "$CI" ]] || echo "--rm") \
+
+	docker run $RMFLAG \
+		-v "/var/run/docker.sock:/var/run/docker.sock" \
 		-v "$PWD/build/linux/powerstrip:/bin/powerstrip" \
 		-v "$PWD/tests/util/testbed/environment:/environment" \
-		-v "/var/run/docker.sock:/var/run/docker.sock" \
+		-e "RMFLAG=$RMFLAG" \
 		powerstrip-testbed \
 		/bin/bash -c "set -e; source /environment; $script" \
 			|| fail "$name exited non-zero"
@@ -36,10 +44,11 @@ use-testbed() {
 
 # if testbed.sh is called directly
 [[ "$0" == "$BASH_SOURCE" ]] && {
-	docker run --rm -it \
-		-v "$PWD/build/linux/powerstrip:/bin/powerstrip" \
+	docker run $RMFLAG -it \
 		-v "/var/run/docker.sock:/var/run/docker.sock" \
+		-v "$PWD/build/linux/powerstrip:/bin/powerstrip" \
 		-v "$PWD/tests/util/testbed/environment:/environment" \
+		-e "RMFLAG=$RMFLAG" \
 		powerstrip-testbed \
 		/bin/bash
 }

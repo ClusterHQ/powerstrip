@@ -9,13 +9,17 @@ start-inspect-adapter() {
 	sleep 0.1
 }
 
+docker-running() {
+	[[ "$(docker inspect -f "{{.State.Running}}" $1 2> /dev/null)" = "true" ]]
+}
+
 cleanup() {
 	stop-powerstrip || true
 	export DOCKER_HOST=unix:///var/run/docker.sock
 	for name in "${_inspects[@]}"; do
-		if docker inspect "$name" > /dev/null 2>&1; then
+		if docker-running "$name"; then
 			docker kill -9 "$name" > /dev/null 2>&1 || true
-			docker rm "$name" > /dev/null
+			docker rm "$name" > /dev/null 2>&1 || true
 		fi
 	done
 }
