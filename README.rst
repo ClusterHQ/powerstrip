@@ -75,8 +75,9 @@ If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_
 
 .. code:: sh
 
-    $ mkdir ~/powerstrip-demo
-    $ cat > ~/powerstrip-demo/adapters.yml <<EOF
+    $ cd ~/
+    $ mkdir powerstrip-demo
+    $ cat > powerstrip-demo/adapters.yml <<EOF
     version: 1
     endpoints:
       "POST /*/containers/create":
@@ -90,7 +91,7 @@ If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_
                clusterhq/powerstrip-slowreq:v0.0.1
     $ sudo docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
-               -v ~/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
+               -v $PWD/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
                clusterhq/powerstrip:v0.0.1
