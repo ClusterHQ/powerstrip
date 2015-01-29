@@ -21,8 +21,10 @@ var DebugMode bool
 // abused throughout during development
 func assert(err error) {
 	if err != nil {
-		//log.Fatal(err)
-		panic(err)
+		if DebugMode {
+			panic(err)
+		}
+		log.Fatal(err)
 	}
 }
 
@@ -52,7 +54,7 @@ func chunked(encodings []string) bool {
 }
 
 func main() {
-	DebugMode = (getopt("DEBUG", "") != "")
+	DebugMode = (getopt("DEBUG", "1") != "") // always debug mode for now
 	port := getopt("PORT", "2375")
 	dockerHost := getopt("DOCKER_HOST", "unix:///var/run/docker.sock")
 	dockerUri, err := url.Parse(dockerHost)
@@ -65,21 +67,28 @@ func main() {
 	assert(err)
 
 	log.Println("powerstrip", Version, "listening on", port, "using", dockerHost, "...")
+	if DebugMode {
+		log.Println("debug mode enabled")
+	}
 
 	adapters := make(map[string]string)
 
 	// Look for adapter containers
 	containers, err := docker.ListContainers(dockerapi.ListContainersOptions{})
-	assert(err)
+	if err != nil {
+		log.Println("unable to connect to docker")
+		assert(err)
+	}
 	for _, listing := range containers {
 		container, err := docker.InspectContainer(listing.ID)
 		assert(err)
+		name := container.Name[1:]
 		for _, env := range container.Config.Env {
 			kvp := strings.SplitN(env, "=", 2)
 			if kvp[0] == "POWERSTRIP_ADAPTER" {
 				for ep, _ := range container.Config.ExposedPorts {
 					port := strings.SplitN(string(ep), "/", 2)
-					adapters[kvp[1]] = net.JoinHostPort(container.NetworkSettings.IPAddress, port[0])
+					adapters[kvp[1]+":"+name] = net.JoinHostPort(container.NetworkSettings.IPAddress, port[0])
 					break
 				}
 				break

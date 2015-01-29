@@ -1,0 +1,34 @@
+
+declare -a _inspects
+start-inspect-adapter() {
+	declare path="$1" hook="$2" bodyfile="$3" headerfile="$4"
+	local name="inspect-$RANDOM"
+	_inspects+=("$name")
+	docker run --name "$name" powerstrip-inspect \
+		"$path" "$hook" 2> "$headerfile" 1> "$bodyfile" &
+	sleep 0.1
+}
+
+cleanup() {
+	stop-powerstrip || true
+	export DOCKER_HOST=unix:///var/run/docker.sock
+	for name in "${_inspects[@]}"; do
+		if docker inspect "$name" > /dev/null 2>&1; then
+			docker kill -9 "$name" > /dev/null 2>&1 || true
+			docker rm "$name" > /dev/null
+		fi
+	done
+}
+
+declare _powerstrip_pid
+start-powerstrip() {
+	sleep 0.3
+	/bin/powerstrip &
+	_powerstrip_pid="$!"
+	sleep 0.3
+}
+
+stop-powerstrip() {
+	kill -9 "$_powerstrip_pid"
+	wait "$_powerstrip_pid" > /dev/null 2>&1 || true
+}

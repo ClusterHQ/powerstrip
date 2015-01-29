@@ -1,0 +1,17 @@
+machine:
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - docker version
+    - make deps
+  override:
+    - make build
+
+test:
+  override:
+    - tests/shunit2:
+        parallel: true
+        files:
+          - tests/*.sh
