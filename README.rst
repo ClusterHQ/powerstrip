@@ -7,10 +7,10 @@ At ClusterHQ we are participating in the `ongoing effort in the Docker community
 You can join this effort at ``#docker-extensions`` on Freenode.
 
 While this work is ongoing there is interest from the community to start prototyping extensions today.
-Enter Powerstrip.
+`Enter Powerstrip <https://clusterhq.com/blog/powerstrip-prototype-docker-extensions-today>.`_
 
 What is Powerstrip?
------------
+-------------------
 
 Powerstrip is implemented as a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extension prototypes into the same Docker daemon.
 
