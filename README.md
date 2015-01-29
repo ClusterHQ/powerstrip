@@ -11,10 +11,23 @@ Assuming you have Go set up [with cross-compile for OS X and Linux](http://www.g
 	$ make container    # builds the docker container
 	$ make test			# runs integration tests with testbed in docker
 
-While developing Powerstrip in Go, you may want to test it. Since the container is small and compiling is fast, there is a debug task that rebuilds binaries and container, then runs it in a container in the foreground:
+While developing Powerstrip in Go, you may want to test it manually. Since the container is small and compiling is fast, there is a debug task that rebuilds binaries and container, then runs it in a container in the foreground in one command:
 
 	$ make debug
 
+## Adapters
+
+Currently, the configuration file from the Twisted version is not implemented. Instead, for now, it auto-discovers adapters running on the same host in Docker at start, and hits them all for all requests, skipping on connection or EOF errors. It does not yet even handle 404 or 405 responses, so adapters should just hang up if they don't implement an endpoint. 
+
+Presently, auto-discovery is done by looking up containers with `POWERSTRIP_ADAPTER` environment variable set. This means you can leave adapters running and just restart Powerstrip (likely with `make debug`) while developing on Powerstrip.
+
+## Testing
+
+Then there are integration / end-to-end tests that actually test with the Docker binary and running Powerstrip and adapters in containers. These live under tests and are written in Bash using shunit2. 
+
+A little bit of tooling has been added so that the tests each run inside the testbed, which is a Docker container with everything needed for end-to-end testing. This suggests tests are run in isolation, and they do sort of, but for now the tests run against the same shared Docker of the host, so they do have to clean up after themselves.
+
+Go unit tests are on the way and the app will continue to be refactored to be more testable in the process.
 
 ## License
 
