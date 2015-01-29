@@ -69,7 +69,9 @@ Powerstrip ships as a Docker image, and adapters can be any HTTP endpoint, inclu
 
 `Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip adapter (container) which adds a 1 second delay to all create commands.
 
-Try it out like this (assuming logged into a Linux Docker host):
+Try it out like this (assuming logged into an Ubuntu Docker host).
+
+If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_VERIFY``.
 
 .. code:: sh
 
