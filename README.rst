@@ -85,18 +85,20 @@ Try it out like this (assuming logged into a Linux Docker host):
 
     $ sudo docker run -d --name powerstrip-slowreq \
                --expose 80 \
-               clusterhq/powerstrip-slowreq:latest
+               clusterhq/powerstrip-slowreq:v0.0.1
     $ sudo docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
                -v ~/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
-               clusterhq/powerstrip:master
+               clusterhq/powerstrip:v0.0.1
 
     # Note how the second command takes a second longer than the first.
     $ time sudo docker run ubuntu echo hello
     $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
 
+**Warning:** Powerstrip exposes the Docker API unprotected on port 2375.
+Only use it in private, secure development environments.
 
 Powerstrip adapters
 -------------------
