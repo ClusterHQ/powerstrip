@@ -14,7 +14,7 @@ What is Powerstrip?
 
 Powerstrip is implemented as a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple Docker extension prototypes into the same Docker daemon.
 
-For example, you can have a storage adapter (e.g. Flocker) running alongside a networking adapter (e.g. Weave), all playing nice with your choice of orchestration framework. 
+For example, you can have a storage adapter (e.g. Flocker) running alongside a networking adapter (e.g. Weave), all playing nice with your choice of orchestration framework.
 
 Crucially for the community, this immediately enables **composition** of prototypes of Docker extensions.
 
@@ -47,15 +47,13 @@ It should eventually be possible to run, for example, a Powerstrip-enabled Docke
     version: 1
     endpoints:
       "POST /*/containers/create":
-        # adapters are applied in list order
         pre: [flocker, weave]
-        post: [weave, flocker]
-      "DELETE /*/containers/*":
-        pre: [flocker, weave]
-        post: [weave, flocker]
+      "POST /*/containers/*/start":
+        post: [weave]
     adapters:
+      weave: http://weave/extension
       flocker: http://flocker/flocker-adapter
-      weave: http://weave/weave-adapter
+
 
 This example might allow an orchestration framework to move (reschedule) stateful containers while their Weave IP and Flocker volumes move around with them.
 
@@ -101,7 +99,8 @@ Try it out like this (assuming logged into a Linux Docker host):
 
 
 Powerstrip adapters
-===================
+-------------------
+
 This is a list of current and upcoming Powerstrip adaptors.  Submit a pull request to add yours:
 
 * powerstrip-flocker: portable data volumes for Docker containers - https://github.com/clusterhq/powerstrip-flocker
@@ -110,14 +109,14 @@ This is a list of current and upcoming Powerstrip adaptors.  Submit a pull reque
 Read on for detailed info on writing your own adapter.
 
 Writing an adapter
------------------
+------------------
 
 A adapter is just a single HTTP POST API endpoint.
 Use your favourite framework and language to write it.
 
 
 Pre-hook adapter endpoints receive POSTs like this
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
 This gives the adapter the opportunity to modify or delay the request.
@@ -162,7 +161,7 @@ Pre-hooks must not change the scope of which endpoint is being matched - rewriti
 
 
 Post-hook adapter endpoints receive POSTs like this
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Post-hooks get called after the response from Docker is complete but before it has been sent back to the client.
 Both the initial request and the Docker response are included in the POST body.
@@ -267,8 +266,8 @@ Then you can just specify the URL using e.g. http://adapter/, assuming "adapter"
 
 Contributing
 ------------
-We'd love your help with Powerstrip.  
-If you have any questions or need help, besides filing a GitHub issue with feature requests or bug reports you can also join us on the #clusterhq or #docker-extensions channel on the irc.freenode.net IRC network. 
+We'd love your help with Powerstrip.
+If you have any questions or need help, besides filing a GitHub issue with feature requests or bug reports you can also join us on the #clusterhq or #docker-extensions channel on the irc.freenode.net IRC network.
 
 We plan to do CI with from https://drone.io/ for unit tests.
 Or maybe Travis-CI.
@@ -302,7 +301,7 @@ Possible improvements
   For both pre and post-hooks.
 * Run all the hooks in case of an error condition, do give them a chance to unwind things.
 * Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
-		
+
 
 Additional Adapter Ideas
 ========================
