@@ -1,8 +1,8 @@
-FROM        ubuntu:14.04
+FROM        ubuntu:14.10
 
 # Last build date - this can be updated whenever there are security updates so
 # that everything is rebuilt
-ENV         security_updates_as_of 2014-07-06
+ENV         security_updates_as_of 2015-01-30
 
 # Install security updates and required packages
 RUN         apt-get -qy update
