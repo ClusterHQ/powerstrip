@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,86 +10,105 @@ import (
 	"testing"
 )
 
-var AddingPreHookAdaptor = func(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	d := json.NewDecoder(r.Body)
+// helpers
 
-	request := map[string]interface{}{}
-	if err := d.Decode(&request); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	clientRequest := request["ClientRequest"].(map[string]interface{})
-
-	// Body is a string? It should be a map[string]interface{}
-
-	body := map[string]interface{}{}
-	err := json.Unmarshal([]byte(clientRequest["Body"].(string)), &body)
+func ParseAdapterRequest(req *http.Request) (*PreHookRequest, *PostHookRequest, error) {
+	defer req.Body.Close()
+	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	// body := clientRequest["Body"].(map[string]interface{})
-	number := body["Number"]
-
-	log.Println(body)
-
-	response := map[string]interface{}{
-		"PowerstripProtocolVersion": 1,
-		"ModifiedClientRequest":     request["ClientRequest"],
+	var untyped map[string]interface{}
+	if err := json.Unmarshal(data, &untyped); err != nil {
+		return nil, nil, err
 	}
+	if untyped["Type"] == "pre-hook" {
+		var prehookReq PreHookRequest
+		if err := json.Unmarshal(data, &prehookReq); err != nil {
+			return nil, nil, err
+		}
+		return &prehookReq, nil, nil
+	}
+	if untyped["Type"] == "post-hook" {
+		var posthookReq PostHookRequest
+		if err := json.Unmarshal(data, &posthookReq); err != nil {
+			return nil, nil, err
+		}
+		return nil, &posthookReq, nil
+	}
+	return nil, nil, nil
+}
 
+func WriteAdapterResponse(w http.ResponseWriter, resp interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	err = encoder.Encode(response)
+	enc := json.NewEncoder(w)
+	err := enc.Encode(resp)
 	if err != nil {
-		http.Error(w, "failed marshal", 500)
-		log.Println("error:", err)
-		return
+		http.Error(w, err.Error(), 500)
+		return err
 	}
-
+	return nil
 }
 
-func NewMockAdderAdapter() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(AddingPreHookAdaptor))
+func NewMockAdapterServer(handler func(http.ResponseWriter, *http.Request)) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(handler))
 }
 
-var mockBody = `{"Number": 1}`
+func NewMockRequest(body string) *http.Request {
+	req, _ := http.NewRequest("POST",
+		"http://dockertest/fake",
+		ioutil.NopCloser(
+			strings.NewReader(body)))
+	return req
+}
 
-// var mockBody = `
-// 		{"Name": "Ed", "Text": "Knock knock."}
-// 		{"Name": "Sam", "Text": "Who's there?"}
-// 		{"Name": "Ed", "Text": "Go fmt."}
-// 		{"Name": "Sam", "Text": "Go fmt who?"}
-// 		{"Name": "Ed", "Text": "Go fmt yourself!"}
-// 	`
+func BodyToBytes(body *string) []byte {
+	if body == nil {
+		return []byte{}
+	}
+	return []byte(*body)
+}
 
-// TestNoPreHookAdaptors applysPrehooks with no adaptors.
-// we should get an identical response as our request.
-func TestNoPreHookAdaptors(t *testing.T) {
-	adaptors := make(map[string]string)
+func MarshalRequestBody(req *ClientRequest, obj interface{}) {
+	b, _ := json.Marshal(obj)
+	str := string(b)
+	req.Body = &str
+}
 
-	req, _ := http.NewRequest("POST", "http://dockertest/create", ioutil.NopCloser(strings.NewReader(mockBody)))
+// tests
 
-	res := applyPrehooks(req, adaptors)
-
-	if res != mockBody {
-		t.Error("expected", mockBody, "got", res)
+func TestNoPreHooks(t *testing.T) {
+	input := "foobar"
+	output := applyPrehooks(NewMockRequest(input), make(map[string]string))
+	if output != input {
+		t.Errorf("expected: %v got: %v", input, output)
 	}
 }
 
-// // TestApplyModifyPreHookAdaptor modify response by incrementing a number by 1
-// func TestApplyModifyPreHookAdaptor(t *testing.T) {
-//
-// }
+func TestModifyJsonPreHook(t *testing.T) {
+	adapter := NewMockAdapterServer(func(w http.ResponseWriter, r *http.Request) {
+		pre, _, _ := ParseAdapterRequest(r)
 
-func TestApplyPrehooks(t *testing.T) {
-	ts := NewMockAdderAdapter()
-	defer ts.Close()
+		var obj map[string]int
+		json.Unmarshal(BodyToBytes(pre.ClientRequest.Body), &obj)
 
-	req, _ := http.NewRequest("POST", "http://dockertest/create", ioutil.NopCloser(strings.NewReader(mockBody)))
+		obj["Number"] = obj["Number"] + 1
+		MarshalRequestBody(&pre.ClientRequest, obj)
 
-	mockURL, _ := url.Parse(ts.URL)
-	_ = applyPrehooks(req, map[string]string{"mock": mockURL.Host})
+		WriteAdapterResponse(w, map[string]interface{}{
+			"PowerstripProtocolVersion": ProtocolVersion,
+			"ModifiedClientRequest":     pre.ClientRequest,
+		})
+	})
+	defer adapter.Close()
+	adapterUrl, _ := url.Parse(adapter.URL)
 
+	input := `{"Number": 1}`
+	expected := `{"Number":2}`
+	output := applyPrehooks(NewMockRequest(input), map[string]string{
+		"mock": adapterUrl.Host,
+	})
+	if output != expected {
+		t.Errorf("expected: %v got: %v", expected, output)
+	}
 }
