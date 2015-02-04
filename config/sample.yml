@@ -1,0 +1,10 @@
+version: 1
+endpoints:
+  "POST /*/containers/*":
+    pre: [flocker, weave]
+    post: [weave]
+  "POST /*/containers/*/start":
+    post: [weave]
+adapters:
+  weave: http://weave/extension
+  flocker: http://flocker/flocker-adapter
