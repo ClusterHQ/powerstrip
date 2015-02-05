@@ -62,9 +62,6 @@ func main() {
 	dockerUri, err := url.Parse(dockerHost)
 	assert(err)
 
-	// docker, err := dockerapi.NewClient(dockerHost)
-	assert(err)
-
 	listener, err := net.Listen("tcp", ":"+port)
 	assert(err)
 
