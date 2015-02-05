@@ -11,8 +11,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gliderlabs/powerstrip/config"
+
 	"code.google.com/p/go-uuid/uuid"
-	dockerapi "github.com/fsouza/go-dockerclient"
 )
 
 var Version string
@@ -56,11 +57,12 @@ func chunked(encodings []string) bool {
 func main() {
 	DebugMode = (getopt("DEBUG", "1") != "") // always debug mode for now
 	port := getopt("PORT", "2375")
+	configPath := getopt("CONFIG", "/etc/powerstrip/adapters.yml")
 	dockerHost := getopt("DOCKER_HOST", "unix:///var/run/docker.sock")
 	dockerUri, err := url.Parse(dockerHost)
 	assert(err)
 
-	docker, err := dockerapi.NewClient(dockerHost)
+	// docker, err := dockerapi.NewClient(dockerHost)
 	assert(err)
 
 	listener, err := net.Listen("tcp", ":"+port)
@@ -71,32 +73,8 @@ func main() {
 		log.Println("debug mode enabled")
 	}
 
-	adapters := make(map[string]string)
-
-	// Look for adapter containers
-	containers, err := docker.ListContainers(dockerapi.ListContainersOptions{})
-	if err != nil {
-		log.Println("unable to connect to docker")
-		assert(err)
-	}
-	for _, listing := range containers {
-		container, err := docker.InspectContainer(listing.ID)
-		assert(err)
-		name := container.Name[1:]
-		for _, env := range container.Config.Env {
-			kvp := strings.SplitN(env, "=", 2)
-			if kvp[0] == "POWERSTRIP_ADAPTER" {
-				for ep, _ := range container.Config.ExposedPorts {
-					port := strings.SplitN(string(ep), "/", 2)
-					adapters[kvp[1]+":"+name] = net.JoinHostPort(container.NetworkSettings.IPAddress, port[0])
-					break
-				}
-				break
-			}
-		}
-	}
-
-	log.Println(adapters)
+	cfg, errs := config.NewConfig(configPath)
+	assert(errs)
 
 	for {
 		conn, err := listener.Accept()
@@ -109,8 +87,9 @@ func main() {
 			req, err := http.ReadRequest(bufio.NewReader(conn))
 			assert(err)
 
-			debug(reqId, "applying prehooks", adapters)
-			body := applyPrehooks(req, adapters)
+			preAdapters, postAdapters := cfg.Match(req)
+			debug(reqId, "applying prehooks", preAdapters)
+			body := applyPrehooks(req, preAdapters)
 
 			debug(reqId, "connecting and writing request")
 			server, err := net.Dial(dockerUri.Scheme, dockerUri.Path)
@@ -143,8 +122,8 @@ func main() {
 				assert(resp.Write(conn))
 				conn.(*net.TCPConn).CloseWrite()
 			} else {
-				debug(reqId, "applying posthooks", adapters)
-				applyPosthooks(resp, req, adapters, body)
+				debug(reqId, "applying posthooks", postAdapters)
+				applyPosthooks(resp, req, postAdapters, body)
 				debug(reqId, "flushing response")
 				assert(resp.Write(conn))
 			}

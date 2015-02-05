@@ -47,7 +47,7 @@ type PostHookResponse struct {
 	ModifiedServerResponse    ServerResponse
 }
 
-func applyPrehooks(req *http.Request, adaptors map[string]string) string {
+func applyPrehooks(req *http.Request, adapters []string) string {
 	body, err := ioutil.ReadAll(req.Body)
 	assert(err)
 	assert(req.Body.Close())
@@ -62,29 +62,28 @@ func applyPrehooks(req *http.Request, adaptors map[string]string) string {
 		},
 	}
 	var prehookResponse PreHookResponse
-	for name, addr := range adaptors {
+	for _, addr := range adapters {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		err := enc.Encode(prehookRequest)
 		if err != nil {
-			debug("prehook skipped:", name, err)
+			debug("prehook skipped:", addr, err)
 			continue
 		}
-		url := "http://" + addr + req.RequestURI
-		hookResp, err := http.Post(url, req.Header.Get("Content-Type"), &buf)
+		hookResp, err := http.Post(addr, req.Header.Get("Content-Type"), &buf)
 		if err != nil {
-			debug("prehook skipped:", name, err)
+			debug("prehook skipped:", addr, err)
 			continue
 		}
 		dec := json.NewDecoder(hookResp.Body)
 		err = dec.Decode(&prehookResponse)
 		if err != nil {
-			debug("prehook skipped:", name, err)
+			debug("prehook skipped:", addr, err)
 			continue
 		}
 		err = hookResp.Body.Close()
 		if err != nil {
-			debug("prehook skipped:", name, err)
+			debug("prehook skipped:", addr, err)
 			continue
 		}
 		prehookRequest.ClientRequest.Body = prehookResponse.ModifiedClientRequest.Body
@@ -101,7 +100,7 @@ func applyPrehooks(req *http.Request, adaptors map[string]string) string {
 	return bodyStr
 }
 
-func applyPosthooks(resp *http.Response, req *http.Request, adaptors map[string]string, reqBody string) {
+func applyPosthooks(resp *http.Response, req *http.Request, adapters []string, reqBody string) {
 	respBody, err := ioutil.ReadAll(resp.Body)
 	assert(err)
 	assert(resp.Body.Close())
@@ -121,29 +120,28 @@ func applyPosthooks(resp *http.Response, req *http.Request, adaptors map[string]
 		},
 	}
 	var posthookResponse PostHookResponse
-	for name, addr := range adaptors {
+	for _, addr := range adapters {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		err := enc.Encode(posthookRequest)
 		if err != nil {
-			debug("posthook skipped:", name, err)
+			debug("posthook skipped:", addr, err)
 			continue
 		}
-		url := "http://" + addr + req.RequestURI
-		hookResp, err := http.Post(url, req.Header.Get("Content-Type"), &buf)
+		hookResp, err := http.Post(addr, req.Header.Get("Content-Type"), &buf)
 		if err != nil {
-			debug("posthook skipped:", name, err)
+			debug("posthook skipped:", addr, err)
 			continue
 		}
 		dec := json.NewDecoder(hookResp.Body)
 		err = dec.Decode(&posthookResponse)
 		if err != nil {
-			debug("posthook skipped:", name, err)
+			debug("posthook skipped:", addr, err)
 			continue
 		}
 		err = hookResp.Body.Close()
 		if err != nil {
-			debug("posthook skipped:", name, err)
+			debug("posthook skipped:", addr, err)
 			continue
 		}
 		posthookRequest.ServerResponse = posthookResponse.ModifiedServerResponse
