@@ -15,11 +15,16 @@ from twisted.internet import reactor
 
 from twisted.protocols.policies import TrafficLoggingFactory
 
+DO_TRAFFIC_LOGGING = False
+
 class GenerallyUsefulPowerstripTestMixin(object):
     def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False,
             realDockerSocket=False, powerstripPort=0):
         if not realDockerSocket:
-            self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
+            if DO_TRAFFIC_LOGGING:
+                self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
+            else:
+                self.dockerAPI = testtools.FakeDockerServer(**dockerArgs)
             if dockerOnSocket:
                 self.socketPath = self.mktemp()
                 self.dockerServer = reactor.listenUNIX(self.socketPath, self.dockerAPI)
@@ -39,13 +44,14 @@ class GenerallyUsefulPowerstripTestMixin(object):
         fp.setContent(config_yml)
         self.parser = EndpointParser(self.config)
         if dockerOnSocket:
-            self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
-                    dockerSocket=self.socketPath, config=self.config), "proxy-")
+            self.proxyAPI = powerstrip.ServerProtocolFactory(
+                    dockerSocket=self.socketPath, config=self.config)
         else:
-            self.proxyAPI = TrafficLoggingFactory(
-                                powerstrip.ServerProtocolFactory(
+            self.proxyAPI = powerstrip.ServerProtocolFactory(
                                 dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
-                                config=self.config), "proxy-")
+                                config=self.config)
+        if DO_TRAFFIC_LOGGING:
+            self.proxyAPI = TrafficLoggingFactory(self.proxyAPI, "proxy-")
         self.proxyServer = reactor.listenTCP(powerstripPort, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
 

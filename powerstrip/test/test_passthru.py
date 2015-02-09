@@ -46,6 +46,7 @@ def CompareDockerAndPowerstrip(test_case, cmd):
             print "Got powerstrip result: %s" % (powerstrip_result,)
             print "Got docker result: %s" % (docker_result,)
             test_case.assertEquals(docker_result, powerstrip_result)
+            return powerstrip_result, docker_result
 
         d.addCallback(compare_result, docker_result)
         return d
@@ -67,7 +68,7 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         Actually run the current (local) version of powerstrip on
         localhost:2375.
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerOnSocket=True,
+        self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock",
                 powerstripPort=2375)
         self.config.read_and_parse()
@@ -81,7 +82,6 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         """
         Test basic ``docker run`` functionality.
         """
-
         # XXX this will need to prime the Docker instance in most cases, e.g.
         # docker pull
         return CompareDockerAndPowerstrip(self,
@@ -92,9 +92,10 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         Test basic ``docker run`` functionality with -ti args. (terminal;
         interactive).
         """
-
-        # XXX this will need to prime the Docker instance in most cases, e.g.
-        # docker pull
-        return CompareDockerAndPowerstrip(self,
-            "docker run ubuntu -ti echo hello")
         # TODO: need to make twisted spawnProcess with a pty
+        d = CompareDockerAndPowerstrip(self,
+            "docker run -ti ubuntu echo hello")
+        def assertions((docker, powerstrip)):
+            self.assertNotIn("fatal", docker)
+        d.addCallback(assertions)
+        return d
