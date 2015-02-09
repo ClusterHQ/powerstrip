@@ -225,26 +225,18 @@ class NullAdapterResource(resource.Resource):
     def _handlePreHook(self, request, requestJson):
         # The desired response is the entire client request
         # payload, unmodified.
-        def waited():
-            request.write(json.dumps({
-                "PowerstripProtocolVersion": 1,
-                "ModifiedClientRequest":
-                    requestJson["ClientRequest"]}))
-            request.finish()
-        deferLater(reactor, 0.1, waited)
-        return server.NOT_DONE_YET
+        return json.dumps({
+            "PowerstripProtocolVersion": 1,
+            "ModifiedClientRequest":
+                requestJson["ClientRequest"]})
 
     def _handlePostHook(self, request, requestJson):
         # The desired response is the entire client request
         # payload, unmodified.
-        def waited():
-            request.write(json.dumps({
-                "PowerstripProtocolVersion": 1,
-                "ModifiedServerResponse":
-                    requestJson["ServerResponse"]}))
-            request.finish()
-        deferLater(reactor, 0.1, waited)
-        return server.NOT_DONE_YET
+        return json.dumps({
+            "PowerstripProtocolVersion": 1,
+            "ModifiedServerResponse":
+                requestJson["ServerResponse"]})
 
 
 def getNullAdapter():
