@@ -156,7 +156,7 @@ adapters:
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             """
-            id=$(docker run -d ubuntu bash -c
+            id=$(docker run -d ubuntu bash -c \\
               "for X in range {1..10000}; do echo \\$X; done");
             docker wait $id >/dev/null; echo $id
             """,
@@ -189,6 +189,57 @@ adapters:
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+        d.addCallback(assertions)
+        return d
+
+    def test_run_null_twice_adapter(self):
+        """
+        Test basic ``docker run`` functionality with null adapter matching all
+        possible API requests to exercise as much codepath as possible.  Twice.
+        """
+        self._getNullAdapter()
+        self._configure("""
+endpoints:
+    "* *":
+      pre: [nothing, nothing2]
+      post: [nothing, nothing2]
+adapters:
+    nothing: http://localhost:%d/null-adapter
+    nothing2: http://localhost:%d/null-adapter
+""" % (self.nullPort, self.nullPort),
+                dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock",
+                powerstripPort=2375)
+        self.config.read_and_parse()
+        d = CompareDockerAndPowerstrip(self,
+            "docker run -ti ubuntu echo hello", usePTY=True)
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+        d.addCallback(assertions)
+        return d
+
+    def test_run_docker_pull(self):
+        """
+        Test basic ``docker run`` functionality with null adapter matching all
+        possible API requests to exercise as much codepath as possible.  Twice.
+        """
+        self._getNullAdapter()
+        self._configure("""
+endpoints:
+    "* *":
+      pre: [nothing]
+      post: [nothing]
+adapters:
+    nothing: http://localhost:%d/null-adapter
+""" % (self.nullPort,),
+                dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock",
+                powerstripPort=2375)
+        self.config.read_and_parse()
+        d = CompareDockerAndPowerstrip(self,
+            "docker pull ubuntu", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
