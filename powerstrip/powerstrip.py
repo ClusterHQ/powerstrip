@@ -170,9 +170,14 @@ class DockerProxy(proxy.ReverseProxyResource):
     def render(self, request, reactor=reactor):
         # We are processing a leaf request.
         # Get the original request body from the client.
+        skipPreHooks = False
         if request.requestHeaders.getRawHeaders('content-type') == ["application/json"]:
             originalRequestBody = request.content.read()
             request.content.seek(0) # hee hee
+        elif request.requestHeaders.getRawHeaders('content-type') == ["application/tar"]:
+            # XXX We can't JSON encode binary data.
+            skipPreHooks = True
+            originalRequestBody = None
         else:
             originalRequestBody = None
         preHooks = []
@@ -190,7 +195,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                 newRequestBody = originalRequestBody
             else:
                 newRequestBody = result["ModifiedClientRequest"]["Body"]
-            # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
                         "PowerstripProtocolVersion": 1,
                         "Type": "pre-hook",
@@ -198,12 +202,16 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Method": request.method,
                             "Request": request.uri,
                             "Body": newRequestBody,
+                            # XXX This would need a ContentType header... if we
+                            # were to support non-JSON POST bodies, like build
+                            # contexts.
                         }
                     }), headers={'Content-Type': ['application/json']})
-        for preHook in preHooks:
-            hookURL = self.config.adapter_uri(preHook)
-            d.addCallback(callPreHook, hookURL=hookURL)
-            d.addCallback(treq.json_content)
+        if not skipPreHooks:
+            for preHook in preHooks:
+                hookURL = self.config.adapter_uri(preHook)
+                d.addCallback(callPreHook, hookURL=hookURL)
+                d.addCallback(treq.json_content)
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
             # mutate request in-place in such a way that ReverseProxyResource
@@ -231,9 +239,18 @@ class DockerProxy(proxy.ReverseProxyResource):
                 rest = self.path + '?' + qs
             else:
                 rest = self.path
+            allRequestHeaders = request.getAllHeaders()
+            if ("transfer-encoding" in allRequestHeaders
+                    and allRequestHeaders["transfer-encoding"] == "chunked"):
+                del allRequestHeaders["transfer-encoding"]
+            # XXX Streaming the contents of the request body into memory could
+            # cause OOM issues for large build contexts POSTed through
+            # powerstrip.
+            body = request.content.read()
+            allRequestHeaders["content-length"] = str(len(body))
             clientFactory = self.proxyClientFactoryClass(
                 request.method, rest, request.clientproto,
-                request.getAllHeaders(), request.content.read(), request)
+                allRequestHeaders, body, request)
             ###########################
             if self.socket:
                 self.reactor.connectUNIX(self.socket, clientFactory)
@@ -249,7 +266,6 @@ class DockerProxy(proxy.ReverseProxyResource):
             return d
         d.addCallback(inspect)
         def callPostHook(result, hookURL):
-            # TODO also handle Method and Request
             serverResponse = result["ModifiedServerResponse"]
             return self.client.post(hookURL, json.dumps({
                         # TODO Write tests for the information provided to the adapter.
@@ -266,6 +282,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Code": serverResponse["Code"],
                         },
                     }), headers={'Content-Type': ['application/json']})
+        # XXX Need to skip post-hooks for tar archives from e.g. docker export.
         for postHook in postHooks:
             hookURL = self.config.adapter_uri(postHook)
             d.addCallback(callPostHook, hookURL=hookURL)

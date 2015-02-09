@@ -31,7 +31,7 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
     :return: A ``Deferred`` which fires when the test has been completed.
     """
     DOCKER = b"unix:///var/run/docker.sock"
-    POWERSTRIP = b"tcp://localhost:2375"
+    POWERSTRIP = b"tcp://localhost:%(proxyPort)d"
 
     d = getProcessOutputPTY(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": DOCKER },
         errortoo=True, usePTY=usePTY)
@@ -40,12 +40,11 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
         if not docker_result:
             raise ValueError("Command did not produce any output when sent to "
                     "Docker daemon.")
-        d = getProcessOutputPTY(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": POWERSTRIP },
+        d = getProcessOutputPTY(b"/bin/bash", ["-c", cmd],
+                { b"DOCKER_HOST": POWERSTRIP % dict(proxyPort=test_case.proxyPort) },
             errortoo=True, usePTY=usePTY)
 
         def compare_result(powerstrip_result, docker_result):
-            #print "Got powerstrip result: %s" % (powerstrip_result,)
-            #print "Got docker result: %s" % (docker_result,)
             if not expectDifferentResults:
                 test_case.assertEquals(docker_result, powerstrip_result)
             return powerstrip_result, docker_result
@@ -80,10 +79,9 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         # docker pull
 
         # Actually run the current (local) version of powerstrip on
-        # localhost:2375.
+        # localhost:something.
         self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         return CompareDockerAndPowerstrip(self,
             "docker run ubuntu echo hello")
@@ -104,8 +102,7 @@ adapters:
   nothing: http://devnull/
 """,
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         return CompareDockerAndPowerstrip(self,
             "docker run ubuntu echo hello")
@@ -123,8 +120,7 @@ adapters:
   nothing: http://devnull/
 """,
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         return CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
@@ -135,8 +131,7 @@ adapters:
         interactive).
         """
         self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
@@ -151,8 +146,7 @@ adapters:
         """
         self._configure("""endpoints: {}\nadapters: {}""",
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             """
@@ -169,23 +163,35 @@ adapters:
         d.addCallback(extractDockerPS)
         return d
 
-    def test_run_null_adapter(self):
-        """
-        Test basic ``docker run`` functionality with null adapter matching all
-        possible API requests to exercise as much codepath as possible.
-        """
-        self._getNullAdapter()
-        self._configure("""
+    NULL_CONFIG = """
 endpoints:
     "* *":
       pre: [nothing]
       post: [nothing]
 adapters:
     nothing: http://localhost:%d/null-adapter
-""" % (self.nullPort,),
+"""
+
+    NULL_TWICE_CONFIG = """
+endpoints:
+    "* *":
+      pre: [nothing, nothing2]
+      post: [nothing, nothing2]
+adapters:
+    nothing: http://localhost:%d/null-adapter
+    nothing2: http://localhost:%d/null-adapter
+"""
+
+
+    def test_run_null_adapter(self):
+        """
+        Test basic ``docker run`` functionality with null adapter matching all
+        possible API requests to exercise as much codepath as possible.
+        """
+        self._getNullAdapter()
+        self._configure(self.NULL_CONFIG % (self.nullPort,),
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
@@ -200,18 +206,9 @@ adapters:
         possible API requests to exercise as much codepath as possible.  Twice.
         """
         self._getNullAdapter()
-        self._configure("""
-endpoints:
-    "* *":
-      pre: [nothing, nothing2]
-      post: [nothing, nothing2]
-adapters:
-    nothing: http://localhost:%d/null-adapter
-    nothing2: http://localhost:%d/null-adapter
-""" % (self.nullPort, self.nullPort),
+        self._configure(self.NULL_TWICE_CONFIG % (self.nullPort, self.nullPort),
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
@@ -225,17 +222,9 @@ adapters:
         Test basic ``docker pull`` functionality.
         """
         self._getNullAdapter()
-        self._configure("""
-endpoints:
-    "* *":
-      pre: [nothing]
-      post: [nothing]
-adapters:
-    nothing: http://localhost:%d/null-adapter
-""" % (self.nullPort,),
+        self._configure(self.NULL_CONFIG % (self.nullPort,),
                 dockerOnSocket=True,
-                realDockerSocket="/var/run/docker.sock",
-                powerstripPort=2375)
+                realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker pull ubuntu", usePTY=True)
@@ -243,13 +232,32 @@ adapters:
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
         return d
+    test_run_docker_pull.skip = "only works when you are online"
 
     def test_run_docker_pull_after_cleanup(self):
         """
         Test basic ``docker pull`` functionality after cleaning up any copies
         of the image that already exist.
         """
-        1/0
+        pass
+    test_run_docker_pull_after_cleanup.skip = "fill this in"
+
+    def test_run_docker_build(self):
+        """
+        Test basic ``docker build`` functionality.
+        """
+        self._getNullAdapter()
+        self._configure(self.NULL_CONFIG % (self.nullPort,),
+                dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock")
+        self.config.read_and_parse()
+        d = CompareDockerAndPowerstrip(self,
+            "cd ../free-dockerfile; docker build .", usePTY=True)
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+        d.addCallback(assertions)
+        return d
+
 
 
 # XXX Ripped from twisted.internet.utils.getProcessOutput (to add PTY support

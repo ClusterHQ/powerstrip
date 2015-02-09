@@ -201,10 +201,6 @@ class AdderRoot(resource.Resource):
 
 # XXX It would be nice not to copy and paste the slowreq adapter.
 
-
-# Copyright ClusterHQ Limited. See LICENSE file for details.
-
-from twisted.internet.task import deferLater
 from twisted.web import server, resource
 
 class NullAdapterResource(resource.Resource):
