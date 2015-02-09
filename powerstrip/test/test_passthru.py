@@ -15,7 +15,8 @@ from twisted.trial.unittest import TestCase
 from ..testtools import GenerallyUsefulPowerstripTestMixin
 
 
-def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False):
+def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
+        expectDifferentResults=False):
     """
     Compare the output of a real Docker server against a Powerstrip passthu.
 
@@ -43,7 +44,8 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False):
             errortoo=True, usePTY=usePTY)
 
         def compare_result(powerstrip_result, docker_result):
-            test_case.assertEquals(docker_result, powerstrip_result)
+            if not expectDifferentResults:
+                test_case.assertEquals(docker_result, powerstrip_result)
             return powerstrip_result, docker_result
 
         d.addCallback(compare_result, docker_result)
@@ -134,9 +136,33 @@ adapters:
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
-        def assertions((docker, powerstrip)):
+        def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
+        return d
+
+    def test_logs(self):
+        """
+        Run a container and then get the logs from it.
+        """
+        self._configure("""
+endpoints: {}
+adapters: {}
+""",
+                dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock",
+                powerstripPort=2375)
+        self.config.read_and_parse()
+        d = CompareDockerAndPowerstrip(self,
+            ("id=$(docker run -d ubuntu echo hello); "
+             "docker wait $id >/dev/null; echo $id"),
+            expectDifferentResults=True)
+        def extractDockerPS((powerstrip, docker)):
+            # Doesn't actually matter which one we use here.
+            containerID = docker.split("\n")[0]
+            return CompareDockerAndPowerstrip(self,
+                    "docker logs %s" % (containerID,))
+        d.addCallback(extractDockerPS)
         return d
 
 
