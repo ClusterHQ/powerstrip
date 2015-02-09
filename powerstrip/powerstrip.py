@@ -209,9 +209,13 @@ class DockerProxy(proxy.ReverseProxyResource):
             # mutate request in-place in such a way that ReverseProxyResource
             # understands it.
             if result is not None:
-                requestBody = result["ModifiedClientRequest"]["Body"].encode("utf-8")
+                requestBody = b""
+                bodyFromAdapter = result["ModifiedClientRequest"]["Body"]
+                if bodyFromAdapter is not None:
+                    requestBody = bodyFromAdapter.encode("utf-8")
                 request.content = StringIO.StringIO(requestBody)
-                request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
+                request.requestHeaders.setRawHeaders(b"content-length",
+                        [str(len(requestBody))])
             ###########################
             # The following code is copied from t.w.proxy.ReverseProxy so that
             # clientFactory reference can be kept.
