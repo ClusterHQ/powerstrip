@@ -85,3 +85,15 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         # docker pull
         return CompareDockerAndPowerstrip(self,
             "docker run ubuntu echo hello")
+
+    def test_run_tty(self):
+        """
+        Test basic ``docker run`` functionality with -ti args. (terminal;
+        interactive).
+        """
+
+        # XXX this will need to prime the Docker instance in most cases, e.g.
+        # docker pull
+        return CompareDockerAndPowerstrip(self,
+            "docker run ubuntu -ti echo hello")
+        # TODO: need to make twisted spawnProcess with a pty
