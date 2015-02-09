@@ -222,8 +222,7 @@ adapters:
 
     def test_run_docker_pull(self):
         """
-        Test basic ``docker run`` functionality with null adapter matching all
-        possible API requests to exercise as much codepath as possible.  Twice.
+        Test basic ``docker pull`` functionality.
         """
         self._getNullAdapter()
         self._configure("""
@@ -244,6 +243,13 @@ adapters:
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
         return d
+
+    def test_run_docker_pull_after_cleanup(self):
+        """
+        Test basic ``docker pull`` functionality after cleaning up any copies
+        of the image that already exist.
+        """
+        1/0
 
 
 # XXX Ripped from twisted.internet.utils.getProcessOutput (to add PTY support
