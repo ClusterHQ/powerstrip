@@ -259,7 +259,6 @@ adapters:
         return d
 
 
-
 # XXX Ripped from twisted.internet.utils.getProcessOutput (to add PTY support
 # to getProcessOutput):
 from twisted.internet.utils import _BackRelay

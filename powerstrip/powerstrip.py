@@ -52,7 +52,12 @@ class DockerProxyClient(proxy.ProxyClient):
         """
         self._listener = d
 
+    def dataReceived(self, data):
+        # print "DATA!", repr(data)
+        return proxy.ProxyClient.dataReceived(self, data)
+
     def handleHeader(self, key, value):
+        # print key, "=>", value
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
             def loseWriteConnectionReason(reason):
                 # discard the reason, for compatibility with readConnectionLost
@@ -66,6 +71,10 @@ class DockerProxyClient(proxy.ProxyClient):
                 "\r\n")
             self._streaming = True
             self._fireListener(Failure(NoPostHooks()))
+        # XXX Turns out, the build endpoint doesn't actually used chunked
+        # encoding. It just sends some JSON documents which maybe happen to
+        # line up with packet boundaries. So the following if statement is both
+        # untested and potentially never triggered in practice. :(
         if key.lower() == "transfer-encoding" and value == "chunked":
             self._streaming = True
             self._fireListener(Failure(NoPostHooks()))
@@ -79,6 +88,7 @@ class DockerProxyClient(proxy.ProxyClient):
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(self, buffer)
         else:
+            # print "BUFFER!", buffer
             self._responsePartBuffer += buffer
 
 
