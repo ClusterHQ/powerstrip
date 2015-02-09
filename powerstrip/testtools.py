@@ -7,6 +7,52 @@ Test utilties for testing the proxy.
 from twisted.web import server, resource
 import json
 
+import testtools, powerstrip
+from ._config import PluginConfiguration
+from ._parser import EndpointParser
+from twisted.python.filepath import FilePath
+from twisted.internet import reactor
+
+from twisted.protocols.policies import TrafficLoggingFactory
+
+class GenerallyUsefulPowerstripTestMixin(object):
+    def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False,
+            realDockerSocket=False, powerstripPort=0):
+        if not realDockerSocket:
+            self.dockerAPI = TrafficLoggingFactory(
+                    testtools.FakeDockerServer(**dockerArgs), "docker-")
+            if dockerOnSocket:
+                self.socketPath = self.mktemp()
+                self.dockerServer = reactor.listenUNIX(
+                        self.socketPath, self.dockerAPI)
+            else:
+                self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
+                self.dockerPort = self.dockerServer.getHost().port
+        else:
+            # NB: only supports real docker on socket (not tcp) at the
+            # moment
+            assert dockerOnSocket, ("must pass dockerOnSocket=True "
+                        "if specifying realDockerSocket")
+            self.socketPath = realDockerSocket
+        self.config = PluginConfiguration()
+        tmp = self.mktemp()
+        self.config._default_file = tmp
+        fp = FilePath(tmp)
+        fp.setContent(config_yml)
+        self.config.read_and_parse()
+        self.parser = EndpointParser(self.config)
+        if dockerOnSocket:
+            self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
+                    dockerSocket=self.socketPath, config=self.config), "proxy-")
+        else:
+            self.proxyAPI = TrafficLoggingFactory(
+                                powerstrip.ServerProtocolFactory(
+                                dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
+                                config=self.config), "proxy-")
+        self.proxyServer = reactor.listenTCP(powerstripPort, self.proxyAPI)
+        self.proxyPort = self.proxyServer.getHost().port
+
+
 
 class FakeDockerServer(server.Site):
     def __init__(self, **kw):

@@ -11,15 +11,11 @@ from treq.client import HTTPClient
 import json
 import treq
 
-from .. import testtools, powerstrip
-from .._config import PluginConfiguration
-from .._parser import EndpointParser
-from twisted.python.filepath import FilePath
-from ..testtools import AdderPlugin
+from ..testtools import AdderPlugin, GenerallyUsefulPowerstripTestMixin
 
 from twisted.protocols.policies import TrafficLoggingFactory
 
-class ProxyTests(TestCase):
+class ProxyTests(TestCase, GenerallyUsefulPowerstripTestMixin):
 
     def setUp(self):
         """
@@ -40,33 +36,6 @@ class ProxyTests(TestCase):
         if hasattr(self, 'adderTwoServer'):
             shutdowns.append(self.adderTwoServer.stopListening())
         return defer.gatherResults(shutdowns)
-
-    def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False):
-        self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
-        if dockerOnSocket:
-            self.socketPath = self.mktemp()
-            self.dockerServer = reactor.listenUNIX(self.socketPath, self.dockerAPI)
-        else:
-            self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
-            self.dockerPort = self.dockerServer.getHost().port
-
-        self.config = PluginConfiguration()
-        tmp = self.mktemp()
-        self.config._default_file = tmp
-        fp = FilePath(tmp)
-        fp.setContent(config_yml)
-        self.config.read_and_parse()
-        self.parser = EndpointParser(self.config)
-        if dockerOnSocket:
-            self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
-                    dockerSocket=self.socketPath, config=self.config), "proxy-")
-        else:
-            self.proxyAPI = TrafficLoggingFactory(
-                                powerstrip.ServerProtocolFactory(
-                                dockerAddr="127.0.0.1", dockerPort=self.dockerPort,
-                                config=self.config), "proxy-")
-        self.proxyServer = reactor.listenTCP(0, self.proxyAPI)
-        self.proxyPort = self.proxyServer.getHost().port
 
     def test_empty_endpoints(self):
         """

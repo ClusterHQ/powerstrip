@@ -4,27 +4,16 @@
 Tests that verify that Docker behaviour is unchanged when running through
 Powerstrip.
 
-Run these tests as so:
+Run these tests as so. Ensure Docker is running on /var/run/docker.sock.
 
-$ # For the blank_adapters.yml
-$ cd $POWERSTRIP_HOME/powerstrip/test
-$ sudo docker run -d --name powerstrip \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v $PWD/blank_adapters.yml:/etc/powerstrip/adapters.yml \
-    -p 2375:2375 \
-    clusterhq/powerstrip:docker-compat-tests
-$ sudo docker run --name powerstrip-test \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v /usr/bin/docker:/usr/bin/docker \
-    -e TEST_PASSTHRU=1 \
-    --link powerstrip:powerstrip \
-    clusterhq/powerstrip:docker-compat-tests trial powerstrip.test.test_passthru
+$ TEST_PASSTHRU=1 trial powerstrip.test.test_passthru
 """
 
 import os
-
+from twisted.internet import defer
 from twisted.internet.utils import getProcessOutput
 from twisted.trial.unittest import TestCase
+from ..testtools import GenerallyUsefulPowerstripTestMixin
 
 def CompareDockerAndPowerstrip(test_case, cmd):
     """
@@ -41,7 +30,7 @@ def CompareDockerAndPowerstrip(test_case, cmd):
     :return: A ``Deferred`` which fires when the test has been completed.
     """
     DOCKER = b"unix:///var/run/docker.sock"
-    POWERSTRIP = b"tcp://powerstrip:2375"
+    POWERSTRIP = b"tcp://localhost:2375"
 
     d = getProcessOutput(b"/bin/bash", ["-c", cmd], { b"DOCKER_HOST": DOCKER },
         errortoo=True)
@@ -65,13 +54,27 @@ def CompareDockerAndPowerstrip(test_case, cmd):
     return d
 
 
-class BasicTests(TestCase):
+class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
     """
     Tests for basic Docker functionality.
     """
 
     if "TEST_PASSTHRU" not in os.environ:
         skip = "Skipping passthru tests."
+
+    def setUp(self):
+        """
+        Actually run the current (local) version of powerstrip on
+        localhost:2375.
+        """
+        self._configure("endpoints: {}\nplugins: {}", dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock",
+                powerstripPort=2375)
+
+    def tearDown(self):
+        shutdowns = [
+            self.proxyServer.stopListening()]
+        return defer.gatherResults(shutdowns)
 
     def test_run(self):
         """
@@ -81,4 +84,4 @@ class BasicTests(TestCase):
         # XXX this will need to prime the Docker instance in most cases, e.g.
         # docker pull
         return CompareDockerAndPowerstrip(self,
-            "docker run -ti ubuntu echo hello")
+            "docker run ubuntu echo hello")
