@@ -21,7 +21,7 @@ class EndpointParserTests(TestCase):
     pre: [gamma]
   "* /v*/images/*/json":
     post: [beta]
-plugins:
+adapters:
   alpha: http://alpha/alpha
   beta: http://beta/beta
   gamma: http://gamma/gamma"""
@@ -67,7 +67,7 @@ plugins:
         config_yml = """endpoints:
   "GET /info":
     post: [gamma]
-plugins:
+adapters:
   alpha: http://alpha/alpha
   beta: http://beta/beta
   gamma: http://gamma/gamma"""

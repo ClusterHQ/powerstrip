@@ -19,12 +19,10 @@ class GenerallyUsefulPowerstripTestMixin(object):
     def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False,
             realDockerSocket=False, powerstripPort=0):
         if not realDockerSocket:
-            self.dockerAPI = TrafficLoggingFactory(
-                    testtools.FakeDockerServer(**dockerArgs), "docker-")
+            self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
             if dockerOnSocket:
                 self.socketPath = self.mktemp()
-                self.dockerServer = reactor.listenUNIX(
-                        self.socketPath, self.dockerAPI)
+                self.dockerServer = reactor.listenUNIX(self.socketPath, self.dockerAPI)
             else:
                 self.dockerServer = reactor.listenTCP(0, self.dockerAPI)
                 self.dockerPort = self.dockerServer.getHost().port
@@ -39,7 +37,6 @@ class GenerallyUsefulPowerstripTestMixin(object):
         self.config._default_file = tmp
         fp = FilePath(tmp)
         fp.setContent(config_yml)
-        self.config.read_and_parse()
         self.parser = EndpointParser(self.config)
         if dockerOnSocket:
             self.proxyAPI = TrafficLoggingFactory(powerstrip.ServerProtocolFactory(
@@ -51,7 +48,6 @@ class GenerallyUsefulPowerstripTestMixin(object):
                                 config=self.config), "proxy-")
         self.proxyServer = reactor.listenTCP(powerstripPort, self.proxyAPI)
         self.proxyPort = self.proxyServer.getHost().port
-
 
 
 class FakeDockerServer(server.Site):
@@ -91,7 +87,7 @@ class FakeDockerTowelResource(resource.Resource):
         else:
             request.setHeader("Content-Type", "application/vnd.docker.raw-stream")
         if self.chunkedResponse:
-            request.setHeader("Content-Encoding", "chunked")
+            request.setHeader("Transfer-Encoding", "chunked")
         return json.dumps(jsonParsed)
 
 
@@ -106,12 +102,12 @@ class FakeDockerInfoResource(resource.Resource):
         """
         Tell some information.
         """
-        return "INFORMATION FOR YOU"
+        return "INFORMATION FOR YOU: %s" % (request.args["return"][0],)
 
 
 class AdderPlugin(server.Site):
     """
-    The first powerstrip plugin: a pre-hook and post-hook implementation of a
+    The first powerstrip adapter: a pre-hook and post-hook implementation of a
     simple adder which can optionally blow up on demand.
     """
     def __init__(self, pre=False, post=False, explode=False, incrementBy=1):
@@ -130,26 +126,28 @@ class AdderResource(resource.Resource):
 
 
     def _renderPreHook(self, request, jsonParsed):
-        jsonParsed["ClientRequest"]["Body"]["Number"] += self.incrementBy
+        parsedBody = json.loads(jsonParsed["ClientRequest"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         # TODO: Don't decode the JSON, probably. Or, special-case Content-Type
         # logic everywhere.
         return json.dumps({"PowerstripProtocolVersion": 1,
                            "ModifiedClientRequest": {
-                               "Method": "POST", # XXX
-                               "Request": "/something", # XXX
-                               "Body": jsonParsed["ClientRequest"]["Body"]}})
+                               "Method": jsonParsed["ClientRequest"]["Method"],
+                               "Request": jsonParsed["ClientRequest"]["Request"],
+                               "Body": json.dumps(parsedBody)}})
 
 
     def _renderPostHook(self, request, jsonParsed):
-        jsonParsed["ServerResponse"]["Body"]["Number"] += self.incrementBy
+        parsedBody = json.loads(jsonParsed["ServerResponse"]["Body"])
+        parsedBody["Number"] += self.incrementBy
         request.setHeader("Content-Type", "application/json")
         return json.dumps({
             "PowerstripProtocolVersion": 1,
             "ModifiedServerResponse": {
-                "ContentType": "application/json", # XXX
-                "Body": jsonParsed["ServerResponse"]["Body"],
-                "Code": 200}}) # XXX
+                "ContentType": jsonParsed["ServerResponse"]["ContentType"],
+                "Body": json.dumps(parsedBody),
+                "Code": jsonParsed["ServerResponse"]["Code"]}})
 
     def render_POST(self, request):
         """
@@ -186,4 +184,4 @@ class AdderRoot(resource.Resource):
         self.explode = explode
         self.incrementBy = incrementBy
         resource.Resource.__init__(self)
-        self.putChild("plugin", AdderResource(self.pre, self.post, self.explode, self.incrementBy))
+        self.putChild("adapter", AdderResource(self.pre, self.post, self.explode, self.incrementBy))

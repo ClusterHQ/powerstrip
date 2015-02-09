@@ -70,6 +70,7 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         self._configure("endpoints: {}\nplugins: {}", dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock",
                 powerstripPort=2375)
+        self.config.read_and_parse()
 
     def tearDown(self):
         shutdowns = [

@@ -44,7 +44,7 @@ class ProxyTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         In particular, when POST to the /towel endpoint on the *proxy*, we get
         to see that we were seen by the (admittedly fake) Docker daemon.
         """
-        self._configure("endpoints: {}\nplugins: {}")
+        self._configure("endpoints: {}\nadapters: {}")
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"hiding": "things"}),
                       headers={'Content-Type': ['application/json']})
@@ -59,7 +59,7 @@ class ProxyTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         """
         The proxy is able to connect to Docker on a UNIX socket.
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerOnSocket=True)
+        self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True)
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"hiding": "things"}),
                       headers={'Content-Type': ['application/json']})
@@ -80,7 +80,7 @@ class ProxyTests(TestCase, GenerallyUsefulPowerstripTestMixin):
   "POST %s":
     pre: []
     post: []
-plugins: {}""" % (endpoint,))
+adapters: {}""" % (endpoint,))
         d = self.client.post('http://127.0.0.1:%d%s' % (self.proxyPort, endpoint),
                              json.dumps({"hiding": "things"}),
                              headers={'Content-Type': ['application/json']})
@@ -109,9 +109,9 @@ plugins: {}""" % (endpoint,))
         self._getAdder(**adderArgs)
         self._getAdderTwo(**adderTwoArgs)
         self.dockerEndpoint = "/towel"
-        self.pluginEndpoint = "/plugin"
+        self.adapterEndpoint = "/adapter"
         self.args = dict(dockerEndpoint=self.dockerEndpoint,
-                         pluginEndpoint=self.pluginEndpoint,
+                         adapterEndpoint=self.adapterEndpoint,
                          adderPort=self.adderPort,
                          adderTwoPort=self.adderTwoPort)
         self._configure(config_yml % self.args)
@@ -125,77 +125,85 @@ plugins: {}""" % (endpoint,))
         d.addCallback(debug)
         return d
 
-    def test_adding_pre_hook_plugin(self):
+    def test_adding_pre_hook_adapter(self):
         """
-        A plugin has a pre-hook which increments an integral field in the JSON
-        POST body called "Number".
-
-        TODO: Assert that Docker saw it, as well as that it came out the end.
+        A adapter has a pre-hook which increments an integral field in the JSON
+        POST body called "Number" which starts with value 1.  Calling that
+        pre-hook once increments the number to 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder]
     post: []
-plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""")
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
                     {"Number": 2, "SeenByFakeDocker": 42})
         d.addCallback(verify)
         return d
 
-    def test_adding_pre_hook_twice_plugin(self):
+    def test_adding_pre_hook_twice_adapter(self):
         """
         Chaining pre-hooks: adding twice means you get +2.
+
+        Note that the naming here is confusing. the adapter "adder2" here is
+        defined as being the **same adapter** as "adder", which increments by
+        1. In later tests, we use a different adder on "adderTwoPort" which
+        increments by 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder, adder2]
     post: []
-plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
-  adder2: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""")
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s
+  adder2: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
                     {"Number": 3, "SeenByFakeDocker": 42})
         d.addCallback(verify)
         return d
 
-    def test_adding_one_then_two_pre_hook_plugin(self):
+    def test_adding_one_then_two_pre_hook_adapter(self):
         """
         Chaining pre-hooks: adding +1 and then +2 gives you +3.
+
+        Note that the naming here is confusing. the adapter "adder2" here is
+        defined as being a **different adapter** to "adder", which increments
+        by 2.
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: [adder, adder2]
     post: []
-plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
-  adder2: http://127.0.0.1:%(adderTwoPort)d%(pluginEndpoint)s""")
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s
+  adder2: http://127.0.0.1:%(adderTwoPort)d%(adapterEndpoint)s""")
         def verify(response):
             self.assertEqual(response,
                     {"Number": 4, "SeenByFakeDocker": 42})
         d.addCallback(verify)
         return d
 
-    def test_adding_post_hook_plugin(self):
+    def test_adding_post_hook_adapter(self):
         """
-        A plugin has a post-hook which increments an integral field in the JSON
+        A adapter has a post-hook which increments an integral field in the JSON
         (Docker) response body called "Number".
         """
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: []
     post: [adder]
-plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s""", adderArgs=dict(post=True))
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s""", adderArgs=dict(post=True))
         def verify(response):
             self.assertEqual(response,
                     {"Number": 2, "SeenByFakeDocker": 42})
         d.addCallback(verify)
         return d
 
-    def test_adding_post_hook_twice_plugin(self):
+    def test_adding_post_hook_twice_adapter(self):
         """
         Chaining post-hooks: adding twice means you get +2.
         """
@@ -203,9 +211,9 @@ plugins:
   "POST %(dockerEndpoint)s":
     pre: []
     post: [adder, adder2]
-plugins:
-  adder: http://127.0.0.1:%(adderPort)d%(pluginEndpoint)s
-  adder2: http://127.0.0.1:%(adderTwoPort)d%(pluginEndpoint)s""",
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s
+  adder2: http://127.0.0.1:%(adderTwoPort)d%(adapterEndpoint)s""",
             adderArgs=dict(post=True),
             adderTwoArgs=dict(post=True))
         def verify(response):
@@ -221,7 +229,7 @@ plugins:
         entire connection switched down into simple TCP-proxying mode (with
         support for half-close).
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(rawStream=True))
+        self._configure("endpoints: {}\nadapters: {}", dockerArgs=dict(rawStream=True))
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"raw": "stream"}),
                       headers={'Content-Type': ['application/json']})
@@ -238,27 +246,29 @@ plugins:
         A chunking endpoint like /pull is permitted with no post-hooks (the
         Docker response's Content-Encoding is chunked).
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
+        self._configure("endpoints: {}\nadapters: {}", dockerArgs=dict(chunkedResponse=True))
         d = self.client.post('http://127.0.0.1:%d/towel' % (self.proxyPort,),
                       json.dumps({"chunked": "response"}),
                       headers={'Content-Type': ['application/json']})
         def verify(response):
-            self.assertEqual(response.headers.getRawHeaders("content-encoding"),
+            self.assertEqual(response.headers.getRawHeaders("transfer-encoding"),
                              ["chunked"])
         d.addCallback(verify)
         return d
+    test_chunked_endpoint.skip = ("Doesn't work yet. "
+            "Need a fake docker which can emit chunked encodings.")
 
     def test_endpoint_GET_args(self):
         """
         An endpoint is matched when it has ?-style GET arguments (and no JSON
         body), and the GET request is passed through.
         """
-        self._configure("endpoints: {}\nplugins: {}", dockerArgs=dict(chunkedResponse=True))
-        d = self.client.get('http://127.0.0.1:%d/info' % (self.proxyPort,))
+        self._configure("endpoints: {}\nadapters: {}", dockerArgs=dict(chunkedResponse=True))
+        d = self.client.get('http://127.0.0.1:%d/info?return=fish' % (self.proxyPort,))
         d.addCallback(treq.content)
         def verify(response):
             self.assertEqual(response,
-                             "INFORMATION FOR YOU")
+                    "INFORMATION FOR YOU: fish")
         d.addCallback(verify)
         return d
 

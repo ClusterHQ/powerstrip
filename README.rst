@@ -1,16 +1,22 @@
 Powerstrip: A tool for prototyping Docker extensions
 ====================================================
 
-At ClusterHQ we are participating in the ongoing effort in the Docker community to add an extensions API to Docker.
-You can join the effort at `#docker-extensions` on Freenode.
-
 .. image:: powerstrip.jpg
+
+At ClusterHQ we are participating in the `ongoing effort in the Docker community to add an extensions API to Docker <https://clusterhq.com/blog/docker-extensions/>`_.
+You can join this effort at ``#docker-extensions`` on Freenode.
+
+While this work is ongoing there is interest from the community to start prototyping extensions today.
+Enter Powerstrip.
+
+What is it?
+-----------
 
 Powerstrip is a configurable, pluggable HTTP proxy for the Docker API which lets you plug multiple prototypical Docker extensions ("Powerstrip adapters") into the same Docker daemon.
 
-So for example you can have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
+So for example you could have a storage adapter coexist with a networking adapter, playing nice with your choice of orchestration framework.
 
-This enables **composition** of prototypes of `Docker extensions <https://clusterhq.com/blog/docker-extensions/>`_.
+Crucially for the community, this immediately enables **composition** of prototypes of Docker extensions.
 
 This is intended to allow quick prototyping, in order to figure out which integration points are needed in order to turn such prototypical adapters into `real Docker extensions <https://github.com/docker/docker/issues/9983>`_.
 
@@ -37,6 +43,7 @@ It should eventually be possible to run, for example, a Powerstrip-enabled Docke
 
 .. code:: yaml
 
+    version: 1
     endpoints:
       "POST /*/containers/create":
         # adapters are applied in list order
@@ -53,13 +60,7 @@ This example might allow an orchestration framework to move (reschedule) statefu
 
 The Powerstrip configuration file can match any of the Docker API endpoints.
 
-This enables you to modify any of the Docker behaviors and means Powerstrip will adapt easily to future changes in the Docker HTTP api.
-
-Demo
-----
-Portable volumes with powerstrip + flocker:
-
-<video demo>
+This enables you to modify any of the Docker behaviour and means Powerstrip will adapt easily to future changes in the Docker HTTP API.
 
 
 Try it out
@@ -69,38 +70,39 @@ Powerstrip ships as a Docker image, and adapters can be any HTTP endpoint, inclu
 
 `Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip adapter (container) which adds a 1 second delay to all create commands.
 
-Try it out like this:
+Try it out like this (assuming logged into a Linux Docker host):
 
 .. code:: sh
 
     $ mkdir ~/powerstrip-demo
     $ cat > ~/powerstrip-demo/adapters.yml <<EOF
+    version: 1
     endpoints:
-      "/*/containers/create":
+      "POST /*/containers/create":
         pre: [slowreq]
     adapters:
-      slowreq: http://slowreq/v1/extension
+      slowreq: http://slowreq/slowreq-adapter
     EOF
 
-    $ docker run -d --name powerstrip-slowreq \
+    $ sudo docker run -d --name powerstrip-slowreq \
                --expose 80 \
-               clusterhq/powerstrip-slowreq
-    $ docker run -d --name powerstrip \
+               clusterhq/powerstrip-slowreq:latest
+    $ sudo docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
                -v ~/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
-               clusterhq/powerstrip
+               clusterhq/powerstrip:master
 
-    # Note how the following command takes a second longer than normal.
-    $ export DOCKER_HOST=localhost:2375
-    $ docker run ubuntu echo hello
+    # Note how the second command takes a second longer than the first.
+    $ time sudo docker run ubuntu echo hello
+    $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
 
 
 Writing a adapter
 ----------------
 
-A adapter is just a REST API with a single endpoint.
+A adapter is just a single HTTP POST API endpoint.
 Use your favourite framework and language to write it.
 
 
@@ -110,7 +112,7 @@ Pre-hook adapter endpoints receive POSTs like this
 Pre-hooks get called when the client has sent a request to the proxy, but before that request is passed through to the Docker daemon.
 This gives the adapter the opportunity to modify or delay the request.
 
-.. code:: http
+.. code::
 
     POST /adapter HTTP/1.1
     Content-type: application/json
@@ -122,13 +124,13 @@ This gives the adapter the opportunity to modify or delay the request.
         ClientRequest: {
             Method: "POST",
             Request: "/v1.16/container/create",
-            Body: { ... } or null
+            Body: "{ ... }" or null
         }
     }
 
 And they respond with:
 
-.. code:: http
+.. code::
 
     HTTP 200 OK
     Content-type: application/json
@@ -138,7 +140,7 @@ And they respond with:
         ModifiedClientRequest: {
             Method: "POST",
             Request: "/v1.16/container/create",
-            Body: { ... } or null
+            Body: "{ ... }" or null
         }
     }
 
@@ -167,14 +169,13 @@ Plugins thus get a chance to modify or delay the response from Docker to the cli
         ClientRequest: {
             Method: "POST",
             Request: "/v1.16/containers/create",
-            Body: { ... }
+            Body: "{ ... }"
         }
         ServerResponse: {
             ContentType: "text/plain",
-            Body: { ... } (if application/json)
-                            or "not found" (if text/plain)
+            Body: "{ ... }" response string
                             or null (if it was a GET request),
-            ResponseCode: 404
+            Code: 404
         }
     }
 
@@ -186,7 +187,7 @@ The adapter responds with:
         PowerstripProtocolVersion: 1,
         ModifiedServerResponse: {
             ContentType: "application/json",
-            Body: { ... },
+            Body: "{ ... }",
             Code: 200
         }
     }
@@ -200,7 +201,8 @@ Chaining
 Both pre- and post-hooks can be chained: the response from the N'th hook is passed in as the request to the N+1'th in list order according to the YAML configuration.
 
 If any hook returns an HTTP error response, the rest of the chain is cancelled, and the error returned to the client.
-You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks. The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought adapter authors would like to know about Docker error messages.
+You can think of this like `Twisted Deferred chains <http://twistedmatrix.com/documents/13.0.0/core/howto/defer.html#auto3>`_ where hooks are like callbacks.
+The exception to this is when the Docker API returns an error: the post-hooks are still run in that case, because we thought adapter authors would like to know about Docker error messages.
 
 
 Defining Endpoints
@@ -230,13 +232,13 @@ A useful resource when defining your endpoints is the `Docker remote API documen
 Limitations
 -----------
 
-Powerstrip does not support adding post-hooks for:
+Powerstrip does not support adding post-hooks for the following types of requests, although pre-hooks work.
 
-* Content-encoding: chunked
+* Transfer-encoding: chunked
 * Content-type: application/vnd.docker.raw-stream
 
 Such response streams will be passed through unmodified from the Docker API.
-This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it is not possible to modify these responses.
+This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it is not possible to modify the responses to these requests.
 
 Pre-hooks operate on the *request* content (which is always assumed to be a single JSON part) rather than the *responses*, so these will work with these kinds of responses.
 
@@ -279,7 +281,7 @@ Possible improvements
 * A Continue response argument could be added to allow chain cancellation with a non-error response.
 * Verbose logging (to stdout) as an optional argument/yaml configuration flag, to help adapter authors debugging adapters.
 
-  * Define the logging/traceability story (plugins and powerstrip log to stdout?).
+  * Define the logging/traceability story (adapters and powerstrip log to stdout?).
 
 * A public list of all known Powerstrip hooks (GitHub links + Docker Hub names).
 * Version the webhooks and the configuration.
