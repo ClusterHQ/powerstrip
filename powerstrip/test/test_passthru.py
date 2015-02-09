@@ -68,6 +68,8 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
     def tearDown(self):
         shutdowns = [
             self.proxyServer.stopListening()]
+        if hasattr(self, "nullServer"):
+            shutdowns.append(self.nullServer.stopListening())
         return defer.gatherResults(shutdowns)
 
     def test_run(self):
@@ -165,6 +167,31 @@ adapters:
             return CompareDockerAndPowerstrip(self,
                     "docker logs %s" % (containerID,))
         d.addCallback(extractDockerPS)
+        return d
+
+    def test_run_null_adapter(self):
+        """
+        Test basic ``docker run`` functionality with null adapter matching all
+        possible API requests to exercise as much codepath as possible.
+        """
+        self._getNullAdapter()
+        self._configure("""
+endpoints:
+    "* *":
+      pre: [nothing]
+      post: [nothing]
+adapters:
+    nothing: http://localhost:%d/slowreq-adapter
+""" % (self.nullPort,),
+                dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock",
+                powerstripPort=2375)
+        self.config.read_and_parse()
+        d = CompareDockerAndPowerstrip(self,
+            "docker run -ti ubuntu echo hello", usePTY=True)
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+        d.addCallback(assertions)
         return d
 
 

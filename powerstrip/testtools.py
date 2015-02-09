@@ -18,8 +18,13 @@ from twisted.protocols.policies import TrafficLoggingFactory
 DO_TRAFFIC_LOGGING = False
 
 class GenerallyUsefulPowerstripTestMixin(object):
+    def _getNullAdapter(self):
+        self.nullAPI = getNullAdapter()
+        self.nullServer = reactor.listenTCP(0, self.nullAPI)
+        self.nullPort = self.nullServer.getHost().port
+
     def _configure(self, config_yml, dockerArgs={}, dockerOnSocket=False,
-            realDockerSocket=False, powerstripPort=0):
+            realDockerSocket=False, powerstripPort=0, nullAdapter=False):
         if not realDockerSocket:
             if DO_TRAFFIC_LOGGING:
                 self.dockerAPI = TrafficLoggingFactory(testtools.FakeDockerServer(**dockerArgs), "docker-")
@@ -37,6 +42,7 @@ class GenerallyUsefulPowerstripTestMixin(object):
             assert dockerOnSocket, ("must pass dockerOnSocket=True "
                         "if specifying realDockerSocket")
             self.socketPath = realDockerSocket
+
         self.config = PluginConfiguration()
         tmp = self.mktemp()
         self.config._default_file = tmp
@@ -191,3 +197,58 @@ class AdderRoot(resource.Resource):
         self.incrementBy = incrementBy
         resource.Resource.__init__(self)
         self.putChild("adapter", AdderResource(self.pre, self.post, self.explode, self.incrementBy))
+
+
+# XXX It would be nice not to copy and paste the slowreq adapter.
+
+
+# Copyright ClusterHQ Limited. See LICENSE file for details.
+
+from twisted.internet.task import deferLater
+from twisted.web import server, resource
+
+class NullAdapterResource(resource.Resource):
+    isLeaf = True
+    def render_POST(self, request):
+        """
+        Handle a pre-hook.
+        """
+        requestJson = json.loads(request.content.read())
+        if requestJson["Type"] == "pre-hook":
+            return self._handlePreHook(request, requestJson)
+        elif requestJson["Type"] == "post-hook":
+            return self._handlePostHook(request, requestJson)
+        else:
+            raise Exception("unsupported hook type %s" %
+                (requestJson["Type"],))
+
+    def _handlePreHook(self, request, requestJson):
+        # The desired response is the entire client request
+        # payload, unmodified.
+        def waited():
+            request.write(json.dumps({
+                "PowerstripProtocolVersion": 1,
+                "ModifiedClientRequest":
+                    requestJson["ClientRequest"]}))
+            request.finish()
+        deferLater(reactor, 0.1, waited)
+        return server.NOT_DONE_YET
+
+    def _handlePostHook(self, request, requestJson):
+        # The desired response is the entire client request
+        # payload, unmodified.
+        def waited():
+            request.write(json.dumps({
+                "PowerstripProtocolVersion": 1,
+                "ModifiedServerResponse":
+                    requestJson["ServerResponse"]}))
+            request.finish()
+        deferLater(reactor, 0.1, waited)
+        return server.NOT_DONE_YET
+
+
+def getNullAdapter():
+    root = resource.Resource()
+    root.putChild("slowreq-adapter", NullAdapterResource())
+    site = server.Site(root)
+    return site
