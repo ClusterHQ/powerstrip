@@ -181,7 +181,7 @@ endpoints:
       pre: [nothing]
       post: [nothing]
 adapters:
-    nothing: http://localhost:%d/slowreq-adapter
+    nothing: http://localhost:%d/null-adapter
 """ % (self.nullPort,),
                 dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock",

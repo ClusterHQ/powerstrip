@@ -249,6 +249,6 @@ class NullAdapterResource(resource.Resource):
 
 def getNullAdapter():
     root = resource.Resource()
-    root.putChild("slowreq-adapter", NullAdapterResource())
+    root.putChild("null-adapter", NullAdapterResource())
     site = server.Site(root)
     return site
