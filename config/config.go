@@ -87,6 +87,18 @@ func (c *Config) Parse() Errors {
 	for key, endpoint := range c.Endpoints {
 		if len(endpoint.Pre) == 0 && len(endpoint.Post) == 0 {
 			errs = append(errs, fmt.Errorf("pre or post adapters required for endpoint: %s", key))
+			break
+		}
+
+		for _, adapter := range endpoint.Pre {
+			if _, ok := c.Adapters[adapter]; ok == false {
+				errs = append(errs, fmt.Errorf("pre hook adapter: %s for endpoint: %s not found", adapter, key))
+			}
+		}
+		for _, adapter := range endpoint.Post {
+			if _, ok := c.Adapters[adapter]; ok == false {
+				errs = append(errs, fmt.Errorf("post hook adapter: %s for endpoint: %s not found", adapter, key))
+			}
 		}
 
 		splitkey := strings.SplitN(key, " ", 2)
