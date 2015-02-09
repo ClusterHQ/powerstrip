@@ -44,6 +44,8 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
             errortoo=True, usePTY=usePTY)
 
         def compare_result(powerstrip_result, docker_result):
+            #print "Got powerstrip result: %s" % (powerstrip_result,)
+            #print "Got docker result: %s" % (docker_result,)
             if not expectDifferentResults:
                 test_case.assertEquals(docker_result, powerstrip_result)
             return powerstrip_result, docker_result
@@ -145,17 +147,17 @@ adapters:
         """
         Run a container and then get the logs from it.
         """
-        self._configure("""
-endpoints: {}
-adapters: {}
-""",
+        self._configure("""endpoints: {}\nadapters: {}""",
                 dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock",
                 powerstripPort=2375)
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
-            ("id=$(docker run -d ubuntu echo hello); "
-             "docker wait $id >/dev/null; echo $id"),
+            """
+            id=$(docker run -d ubuntu bash -c
+              "for X in range {1..10000}; do echo \\$X; done");
+            docker wait $id >/dev/null; echo $id
+            """,
             expectDifferentResults=True)
         def extractDockerPS((powerstrip, docker)):
             # Doesn't actually matter which one we use here.
