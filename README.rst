@@ -232,15 +232,20 @@ A useful resource when defining your endpoints is the `Docker remote API documen
 Limitations
 -----------
 
-Powerstrip does not support adding post-hooks for the following types of requests, although pre-hooks work.
+Powerstrip does not support, and will silently skip over certain types of hooks in the following cases:
 
-* Transfer-encoding: chunked
-* Content-type: application/vnd.docker.raw-stream
+* pre-hooks for request bodies with content-types other than ``application/json``, such as build contexts POSTed in the ``build`` API call.
+* post-hooks for responses with content-type ``application/vnd.docker.raw-stream``, such as "hijacked" responses in the ``attach`` API call.
 
-Such response streams will be passed through unmodified from the Docker API.
-This means that e.g. ``docker attach`` and ``docker pull`` (or ``push``) will *work*, but it is not possible to modify the responses to these requests.
+For responses that are streamed back from the Docker daemon without proper framing (such as ``build`` and ``pull`` API call responses):
 
-Pre-hooks operate on the *request* content (which is always assumed to be a single JSON part) rather than the *responses*, so these will work with these kinds of responses.
+* if post-hooks are not added:
+
+  * responses will be streamed to the client as they come in from the Docker daemon.
+
+* otherwise, if post-hooks are added, then:
+
+  * responses will be buffered and then delivered to the post-hook chain as a single body.
 
 
 Recommended deployment

@@ -43,6 +43,17 @@ class DockerProxyClient(proxy.ProxyClient):
             self._listener = None
             d.callback(result)
 
+    def setStreamingMode(self, streamingMode):
+        """
+        Allow anyone with a reference to us to toggle on/off streaming mode.
+        Useful when we have no post-hooks (and no indication from Docker that
+        it's sending packets of JSON e.g. with build) and we want to avoid
+        buffering slow responses in memory.
+        """
+        self._streaming = streamingMode
+        if streamingMode:
+            self._fireListener(Failure(NoPostHooks()))
+
     def registerListener(self, d):
         """
         Register a one shot listener, which can fire either with:
@@ -69,15 +80,13 @@ class DockerProxyClient(proxy.ProxyClient):
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/vnd.docker.raw-stream\r\n"
                 "\r\n")
-            self._streaming = True
-            self._fireListener(Failure(NoPostHooks()))
+            self.setStreamingMode(True)
         # XXX Turns out, the build endpoint doesn't actually used chunked
         # encoding. It just sends some JSON documents which maybe happen to
         # line up with packet boundaries. So the following if statement is both
         # untested and potentially never triggered in practice. :(
         if key.lower() == "transfer-encoding" and value == "chunked":
-            self._streaming = True
-            self._fireListener(Failure(NoPostHooks()))
+            self.setStreamingMode(True)
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
@@ -185,7 +194,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             originalRequestBody = request.content.read()
             request.content.seek(0) # hee hee
         elif request.requestHeaders.getRawHeaders('content-type') == ["application/tar"]:
-            # XXX We can't JSON encode binary data.
+            # XXX We can't JSON encode binary data, so don't even try.
             skipPreHooks = True
             originalRequestBody = None
         else:
@@ -214,7 +223,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Body": newRequestBody,
                             # XXX This would need a ContentType header... if we
                             # were to support non-JSON POST bodies, like build
-                            # contexts.
+                            # contexts in pre-hooks.
                         }
                     }), headers={'Content-Type': ['application/json']})
         if not skipPreHooks:
@@ -271,8 +280,12 @@ class DockerProxy(proxy.ReverseProxyResource):
             return d
         d.addCallback(doneAllPrehooks)
         def inspect(client):
+            # If there are no post-hooks, allow the response to be streamed
+            # back to the client, rather than buffered.
             d = defer.Deferred()
             client.registerListener(d)
+            if not postHooks:
+                client.setStreamingMode(True)
             return d
         d.addCallback(inspect)
         def callPostHook(result, hookURL):
