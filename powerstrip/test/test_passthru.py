@@ -45,6 +45,8 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
             errortoo=True, usePTY=usePTY)
 
         def compare_result(powerstrip_result, docker_result):
+            print "got powerstrip", repr(powerstrip_result)
+            print "got docker", repr(docker_result)
             if not expectDifferentResults:
                 test_case.assertEquals(docker_result, powerstrip_result)
             return powerstrip_result, docker_result
@@ -257,6 +259,16 @@ adapters:
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
         return d
+
+    def test_run_stdin(self):
+        """
+        Test basic ``docker run`` functionality when piped stdin.
+        """
+        self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True,
+                realDockerSocket="/var/run/docker.sock")
+        self.config.read_and_parse()
+        return CompareDockerAndPowerstrip(self,
+            "echo hello |docker run -i ubuntu cat")
 
 
 # XXX Ripped from twisted.internet.utils.getProcessOutput (to add PTY support
