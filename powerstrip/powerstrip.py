@@ -80,6 +80,9 @@ class DockerProxyClient(proxy.ProxyClient):
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/vnd.docker.raw-stream\r\n"
                 "\r\n")
+            def stdinHandler(data):
+                self.transport.write(data)
+            self.father.transport.protocol.dataReceived = stdinHandler
             self.setStreamingMode(True)
         # XXX Turns out, the build endpoint doesn't actually used chunked
         # encoding. It just sends some JSON documents which maybe happen to
@@ -159,6 +162,7 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
+
 
     def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None,
             path='', reactor=reactor, config=None):

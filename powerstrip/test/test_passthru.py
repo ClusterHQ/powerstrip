@@ -45,8 +45,6 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
             errortoo=True, usePTY=usePTY)
 
         def compare_result(powerstrip_result, docker_result):
-            print "got powerstrip", repr(powerstrip_result)
-            print "got docker", repr(docker_result)
             if not expectDifferentResults:
                 test_case.assertEquals(docker_result, powerstrip_result)
             return powerstrip_result, docker_result
