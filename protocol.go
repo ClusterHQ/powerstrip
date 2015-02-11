@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -47,7 +48,7 @@ type PostHookResponse struct {
 	ModifiedServerResponse    ServerResponse
 }
 
-func applyPrehooks(req *http.Request, adapters []string) string {
+func applyPrehooks(req *http.Request, adapters []*url.URL) string {
 	body, err := ioutil.ReadAll(req.Body)
 	assert(err)
 	assert(req.Body.Close())
@@ -70,7 +71,7 @@ func applyPrehooks(req *http.Request, adapters []string) string {
 			debug("prehook skipped:", addr, err)
 			continue
 		}
-		hookResp, err := http.Post(addr, req.Header.Get("Content-Type"), &buf)
+		hookResp, err := http.Post(addr.String(), req.Header.Get("Content-Type"), &buf)
 		if err != nil {
 			debug("prehook skipped:", addr, err)
 			continue
@@ -100,7 +101,7 @@ func applyPrehooks(req *http.Request, adapters []string) string {
 	return bodyStr
 }
 
-func applyPosthooks(resp *http.Response, req *http.Request, adapters []string, reqBody string) {
+func applyPosthooks(resp *http.Response, req *http.Request, adapters []*url.URL, reqBody string) {
 	respBody, err := ioutil.ReadAll(resp.Body)
 	assert(err)
 	assert(resp.Body.Close())
@@ -128,7 +129,7 @@ func applyPosthooks(resp *http.Response, req *http.Request, adapters []string, r
 			debug("posthook skipped:", addr, err)
 			continue
 		}
-		hookResp, err := http.Post(addr, req.Header.Get("Content-Type"), &buf)
+		hookResp, err := http.Post(addr.String(), req.Header.Get("Content-Type"), &buf)
 		if err != nil {
 			debug("posthook skipped:", addr, err)
 			continue

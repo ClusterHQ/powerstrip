@@ -79,7 +79,7 @@ func MarshalRequestBody(req *ClientRequest, obj interface{}) {
 
 func TestNoPreHooks(t *testing.T) {
 	input := "foobar"
-	output := applyPrehooks(NewMockRequest(input), make(map[string]string))
+	output := applyPrehooks(NewMockRequest(input), []*url.URL{})
 	if output != input {
 		t.Errorf("expected: %v got: %v", input, output)
 	}
@@ -101,12 +101,15 @@ func TestModifyJsonPreHook(t *testing.T) {
 		})
 	})
 	defer adapter.Close()
-	adapterUrl, _ := url.Parse(adapter.URL)
 
 	input := `{"Number": 1}`
 	expected := `{"Number":2}`
-	output := applyPrehooks(NewMockRequest(input), map[string]string{
-		"mock": adapterUrl.Host,
+	addr, err := url.Parse(adapter.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	output := applyPrehooks(NewMockRequest(input), []*url.URL{
+		addr,
 	})
 	if output != expected {
 		t.Errorf("expected: %v got: %v", expected, output)

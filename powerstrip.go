@@ -11,8 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gliderlabs/powerstrip/config"
-
 	"code.google.com/p/go-uuid/uuid"
 )
 
@@ -70,7 +68,7 @@ func main() {
 		log.Println("debug mode enabled")
 	}
 
-	cfg, errs := config.NewConfig(configPath)
+	cfg, errs := ReadConfig(configPath)
 	assert(errs)
 
 	for {
