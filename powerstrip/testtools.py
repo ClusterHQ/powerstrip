@@ -214,7 +214,7 @@ class NullAdapterResource(resource.Resource):
                 requestJson["ClientRequest"]})
 
     def _handlePostHook(self, request, requestJson):
-        # The desired response is the entire client request
+        # The desired response is the entire server response
         # payload, unmodified.
         return json.dumps({
             "PowerstripProtocolVersion": 1,
