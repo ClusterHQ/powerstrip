@@ -253,7 +253,7 @@ adapters:
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
-            "cd ../free-dockerfile; docker build .", usePTY=True)
+            "cd ../fixtures/free-dockerfile; docker build .", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
