@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,13 +69,6 @@ func unmarshalConfig(data []byte) (*Config, error) {
 // Parse validates and fills in values on the Config struct.
 func (c *Config) Parse() Errors {
 	var errs Errors
-	if len(c.Endpoints) == 0 {
-		errs = append(errs, errors.New("endpoints are required"))
-	}
-	if len(c.Adapters) == 0 {
-		errs = append(errs, errors.New("adapters are required"))
-	}
-
 	for key, adapter := range c.Adapters {
 		if len(adapter) == 0 {
 			errs = append(errs, fmt.Errorf("url requred for adapter: %s", key))

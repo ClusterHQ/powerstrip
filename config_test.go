@@ -50,6 +50,13 @@ func TestNewConfigFile(t *testing.T) {
 	}
 }
 
+func TestBlankConfig(t *testing.T) {
+	_, err := unmarshalConfig([]byte(``))
+	if err != nil {
+		t.Error("expected empty config to be valid")
+	}
+}
+
 func TestInvalidConfig(t *testing.T) {
 	_, err := unmarshalConfig([]byte(`version: 1
 		adapters:
@@ -58,10 +65,7 @@ func TestInvalidConfig(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for invalid config file")
 	}
-	_, err = unmarshalConfig([]byte(``))
-	if err == nil {
-		t.Error("expected error for invalid config file")
-	}
+
 }
 
 func TestConfigParsing(t *testing.T) {
@@ -97,17 +101,6 @@ func TestEndpointMethodPatternParse(t *testing.T) {
 			t.Errorf("expeted pattern: %s got pattern: %s", pattern, endpoint.Pattern)
 		}
 	}
-}
-
-func TestEndpointsRequired(t *testing.T) {
-	cfg := newValidConfig()
-
-	cfg.Endpoints = nil
-
-	if !hasError(cfg.Parse(), "endpoints are required") {
-		t.Error("expected error for missing endpoints")
-	}
-
 }
 
 func TestEndpointNoHooks(t *testing.T) {
@@ -146,12 +139,21 @@ func TestEndpointOptionalPost(t *testing.T) {
 	}
 }
 
-func TestAdaptersRequired(t *testing.T) {
+func TestEndpointPreAdapterExist(t *testing.T) {
 	cfg := newValidConfig()
-	cfg.Adapters = map[string]string{}
 
-	if !hasError(cfg.Parse(), "adapters are required") {
-		t.Error("got nil error for invalid config")
+	for key, endpoint := range cfg.Endpoints {
+		endpoint.Pre = []string{"undefined!"}
+		endpoint.Post = []string{"undefined!"}
+		cfg.Endpoints[key] = endpoint
+	}
+
+	if !hasError(cfg.Parse(), "pre hook adapter") {
+		t.Error("expected error for missing pre hook adapter")
+	}
+
+	if !hasError(cfg.Parse(), "post hook adapter") {
+		t.Error("expected error for missing post hook adapter")
 	}
 }
 
