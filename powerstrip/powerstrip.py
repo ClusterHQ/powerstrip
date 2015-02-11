@@ -202,7 +202,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             originalRequestBody = request.content.read()
             request.content.seek(0) # hee hee
         elif request.requestHeaders.getRawHeaders('content-type') == ["application/tar"]:
-            # XXX We can't JSON encode binary data, so don't even try.
+            # We can't JSON encode binary data, so don't even try.
             skipPreHooks = True
             originalRequestBody = None
         else:
