@@ -199,10 +199,6 @@ class AdderRoot(resource.Resource):
         self.putChild("adapter", AdderResource(self.pre, self.post, self.explode, self.incrementBy))
 
 
-# XXX It would be nice not to copy and paste the slowreq adapter.
-
-from twisted.web import server, resource
-
 class NullAdapterResource(resource.Resource):
     isLeaf = True
     def render_POST(self, request):
