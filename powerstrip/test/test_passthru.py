@@ -233,7 +233,6 @@ adapters:
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
         return d
-    test_run_docker_pull.skip = "only works when you are online"
 
     def test_run_docker_pull_after_cleanup(self):
         """
