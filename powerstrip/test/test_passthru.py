@@ -93,7 +93,8 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         """
         # Note that http://devnull/ should never be attempted because one
         # should always skip a post-hook when Docker responds with a hijacked
-        # response type.
+        # response type. If the implementation *does* attempt to connect to
+        # `devnull`, the test will fail with a DNS lookup error.
         self._configure("""
 endpoints:
   "POST /*/containers/*/attach":
