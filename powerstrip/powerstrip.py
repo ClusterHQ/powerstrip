@@ -63,23 +63,31 @@ class DockerProxyClient(proxy.ProxyClient):
         """
         self._listener = d
 
+    def _handleRawStream(self):
+        """
+        Switch the current connection to be a "hijacked" aka raw stream: one
+        where bytes just get naively proxied back and forth.
+        """
+        def loseWriteConnectionReason(reason):
+            # discard the reason, for compatibility with readConnectionLost
+            self.transport.loseWriteConnection()
+        self.father.transport.readConnectionLost = loseWriteConnectionReason
+        directlyProvides(self.father.transport, IHalfCloseableProtocol)
+        self.http = False
+        self.father.transport.write(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/vnd.docker.raw-stream\r\n"
+            "\r\n")
+        def stdinHandler(data):
+            self.transport.write(data)
+        self.father.transport.protocol.dataReceived = stdinHandler
+        self.setStreamingMode(True)
+
     def handleHeader(self, key, value):
         # print key, "=>", value
-        if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
-            def loseWriteConnectionReason(reason):
-                # discard the reason, for compatibility with readConnectionLost
-                self.transport.loseWriteConnection()
-            self.father.transport.readConnectionLost = loseWriteConnectionReason
-            directlyProvides(self.father.transport, IHalfCloseableProtocol)
-            self.http = False
-            self.father.transport.write(
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: application/vnd.docker.raw-stream\r\n"
-                "\r\n")
-            def stdinHandler(data):
-                self.transport.write(data)
-            self.father.transport.protocol.dataReceived = stdinHandler
-            self.setStreamingMode(True)
+        if (key.lower() == "content-type" and
+                value == "application/vnd.docker.raw-stream"):
+            self._handleRawStream()
         # XXX Turns out, the build endpoint doesn't actually used chunked
         # encoding. It just sends some JSON documents which maybe happen to
         # line up with packet boundaries. So the following if statement is both
