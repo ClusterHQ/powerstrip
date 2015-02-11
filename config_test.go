@@ -13,12 +13,13 @@ func newValidConfig() *Config {
 		Version: 1,
 		Endpoints: map[string]Endpoint{
 			"POST /*/containers/*": Endpoint{
-				Pre:  []string{"slowreq"},
+				Pre:  []string{"slowreq", "slowreq-trailing"},
 				Post: []string{"slowreq"},
 			},
 		},
 		Adapters: map[string]string{
-			"slowreq": "http://slowreq/slowreq-adapter",
+			"slowreq":          "http://slowreq/slowreq-adapter",
+			"slowreq-trailing": "http://slowreq/slowreq-adapter/",
 		},
 	}
 
@@ -30,8 +31,12 @@ func newValidConfig() *Config {
 	return cfg
 }
 
+func hasError(err error, substr string) bool {
+	return strings.Contains(err.Error(), substr)
+}
+
 func TestNewConfigFile(t *testing.T) {
-	cfg, err := NewConfigFile("sample.yml")
+	cfg, err := ReadConfig("sample.yml")
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,21 +44,21 @@ func TestNewConfigFile(t *testing.T) {
 		t.Error("config is nil")
 	}
 
-	_, err = NewConfigFile("nonexistant")
+	_, err = ReadConfig("nonexistant")
 	if err == nil {
 		t.Error("expected error for non existant file")
 	}
 }
 
 func TestInvalidConfig(t *testing.T) {
-	_, err := NewConfig([]byte(`version: 1
+	_, err := unmarshalConfig([]byte(`version: 1
 		adapters:
 		  flocker: http://flocker/flocker-adapter
 `))
 	if err == nil {
 		t.Error("expected error for invalid config file")
 	}
-	_, err = NewConfig([]byte(``))
+	_, err = unmarshalConfig([]byte(``))
 	if err == nil {
 		t.Error("expected error for invalid config file")
 	}
@@ -94,12 +99,12 @@ func TestEndpointMethodPatternParse(t *testing.T) {
 	}
 }
 
-func TestNoEndpoints(t *testing.T) {
+func TestEndpointsRequired(t *testing.T) {
 	cfg := newValidConfig()
 
 	cfg.Endpoints = nil
 
-	if errs := cfg.Parse(); errs == nil {
+	if !hasError(cfg.Parse(), "endpoints are required") {
 		t.Error("expected error for missing endpoints")
 	}
 
@@ -113,7 +118,7 @@ func TestEndpointNoHooks(t *testing.T) {
 		endpoint.Post = nil
 		cfg.Endpoints[key] = endpoint
 	}
-	if errs := cfg.Parse(); errs == nil {
+	if !hasError(cfg.Parse(), "pre or post adapters required") {
 		t.Error("expected error for missing pre and post hook adapters")
 	}
 }
@@ -141,13 +146,24 @@ func TestEndpointOptionalPost(t *testing.T) {
 	}
 }
 
-func TestAdapterNotDefined(t *testing.T) {
+func TestAdaptersRequired(t *testing.T) {
+	cfg := newValidConfig()
+	cfg.Adapters = map[string]string{}
+
+	if !hasError(cfg.Parse(), "adapters are required") {
+		t.Error("got nil error for invalid config")
+	}
+}
+
+func TestAdapterURLRequired(t *testing.T) {
 	cfg := newValidConfig()
 
-	delete(cfg.Adapters, "slowreq")
+	cfg.Adapters = map[string]string{
+		"slowreq": "",
+	}
 
-	if errs := cfg.Parse(); errs == nil {
-		t.Error("got nil error for invalid config")
+	if !hasError(cfg.Parse(), "url requred") {
+		t.Error("expected error for missing adapter url")
 	}
 }
 

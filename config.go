@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 
@@ -41,17 +42,17 @@ type Endpoint struct {
 	Post    []string
 }
 
-// NewConfigFile reads a file then calls NewConfig
-func NewConfigFile(file string) (*Config, error) {
+// ReadConfig reads and parses config.
+func ReadConfig(file string) (*Config, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
-	return NewConfig(data)
+	return unmarshalConfig(data)
 }
 
-// NewConfig reads and parses a yaml config
-func NewConfig(data []byte) (*Config, error) {
+// unmarshalConfig unmarshals a yaml byte array into a config struct.
+func unmarshalConfig(data []byte) (*Config, error) {
 	conf := &Config{}
 	err := yaml.Unmarshal(data, conf)
 	if err != nil {
@@ -84,18 +85,18 @@ func (c *Config) Parse() Errors {
 
 	for key, endpoint := range c.Endpoints {
 		if len(endpoint.Pre) == 0 && len(endpoint.Post) == 0 {
-			errs = append(errs, fmt.Errorf("pre or post adapters required for endpoint: %s", key))
+			errs = append(errs, fmt.Errorf("pre or post adapters required for endpoint: '%s'", key))
 			break
 		}
 
 		for _, adapter := range endpoint.Pre {
 			if _, ok := c.Adapters[adapter]; ok == false {
-				errs = append(errs, fmt.Errorf("pre hook adapter: %s for endpoint: %s not found", adapter, key))
+				errs = append(errs, fmt.Errorf("pre hook adapter: '%s' for endpoint: '%s' not found", adapter, key))
 			}
 		}
 		for _, adapter := range endpoint.Post {
 			if _, ok := c.Adapters[adapter]; ok == false {
-				errs = append(errs, fmt.Errorf("post hook adapter: %s for endpoint: %s not found", adapter, key))
+				errs = append(errs, fmt.Errorf("post hook adapter: '%s' for endpoint: '%s' not found", adapter, key))
 			}
 		}
 
@@ -111,25 +112,41 @@ func (c *Config) Parse() Errors {
 }
 
 // Match returns pre and post adapter urls for a request.
-func (c *Config) Match(req *http.Request) ([]string, []string) {
-	var preURLs, postURLs []string
+func (c *Config) Match(req *http.Request) ([]*url.URL, []*url.URL) {
+	var preURLs, postURLs []*url.URL
 	for _, endpoint := range c.Endpoints {
 		match, _ := path.Match(endpoint.Pattern, req.URL.Path)
 
 		if match {
 			for _, name := range endpoint.Pre {
-				url, ok := c.Adapters[name]
+				addr, ok := c.Adapters[name]
 				if ok {
-					url = url + req.URL.Path
-					preURLs = append(preURLs, url)
+					uri, err := url.Parse(addr)
+					// I don't know how much I like this.
+					// The only way to solve it would be to
+					// parse the url when loading config.
+					if err != nil {
+						debug("error parsing adapter url:", name, addr)
+						continue
+					}
+					uri = uri.ResolveReference(req.URL)
+					preURLs = append(preURLs, uri)
 				}
 			}
 
 			for _, name := range endpoint.Post {
-				url, ok := c.Adapters[name]
+				addr, ok := c.Adapters[name]
 				if ok {
-					url = url + req.URL.Path
-					postURLs = append(postURLs, url)
+					uri, err := url.Parse(addr)
+					// I don't know how much I like this.
+					// The only way to solve it would be to
+					// parse the url when loading config.
+					if err != nil {
+						debug("error parsing adapter url:", name, addr)
+						continue
+					}
+					uri.ResolveReference(req.URL)
+					postURLs = append(postURLs, uri)
 				}
 			}
 		}

@@ -68,7 +68,7 @@ func main() {
 		log.Println("debug mode enabled")
 	}
 
-	cfg, errs := NewConfigFile(configPath)
+	cfg, errs := ReadConfig(configPath)
 	assert(errs)
 
 	for {
