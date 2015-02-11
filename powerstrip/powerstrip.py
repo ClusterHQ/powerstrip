@@ -229,9 +229,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Method": request.method,
                             "Request": request.uri,
                             "Body": newRequestBody,
-                            # XXX This would need a ContentType header... if we
-                            # were to support non-JSON POST bodies, like build
-                            # contexts in pre-hooks.
                         }
                     }), headers={'Content-Type': ['application/json']})
         if not skipPreHooks:
