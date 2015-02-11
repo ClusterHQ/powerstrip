@@ -63,10 +63,6 @@ class DockerProxyClient(proxy.ProxyClient):
         """
         self._listener = d
 
-    def dataReceived(self, data):
-        # print "DATA!", repr(data)
-        return proxy.ProxyClient.dataReceived(self, data)
-
     def handleHeader(self, key, value):
         # print key, "=>", value
         if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
