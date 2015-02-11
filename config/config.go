@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
 
@@ -42,22 +41,26 @@ type Endpoint struct {
 	Post    []string
 }
 
-// NewConfig reads and parses a yaml config file
-func NewConfig(file string) (*Config, error) {
+// NewConfigFile reads a file then calls NewConfig
+func NewConfigFile(file string) (*Config, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
+	return NewConfig(data)
+}
 
+// NewConfig reads and parses a yaml config
+func NewConfig(data []byte) (*Config, error) {
 	conf := &Config{}
-	err = yaml.Unmarshal(data, conf)
+	err := yaml.Unmarshal(data, conf)
 	if err != nil {
 		return nil, err
 	}
 
 	errs := conf.Parse()
 	if errs != nil {
-		return nil, err
+		return nil, errs
 	}
 
 	return conf, nil
@@ -77,11 +80,6 @@ func (c *Config) Parse() Errors {
 		if len(adapter) == 0 {
 			errs = append(errs, fmt.Errorf("url requred for adapter: %s", key))
 		}
-
-		if _, err := url.Parse(adapter); err != nil {
-			errs = append(errs, fmt.Errorf("invalid url for adapter: %s", key))
-		}
-
 	}
 
 	for key, endpoint := range c.Endpoints {

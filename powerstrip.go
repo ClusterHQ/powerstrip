@@ -70,7 +70,7 @@ func main() {
 		log.Println("debug mode enabled")
 	}
 
-	cfg, errs := config.NewConfig(configPath)
+	cfg, errs := config.NewConfigFile(configPath)
 	assert(errs)
 
 	for {

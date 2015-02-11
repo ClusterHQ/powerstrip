@@ -30,24 +30,32 @@ func newValidConfig() *Config {
 	return cfg
 }
 
-var invalidConfig = `
-version: 1
-endpoints:
-  "POST /*/containers/create":
-adapters:
-  weave:
-  flocker: http://flocker/flocker-adapter
-`
-
-func TestNewConfig(t *testing.T) {
-	cfg, err := NewConfig("sample.yml")
-
+func TestNewConfigFile(t *testing.T) {
+	cfg, err := NewConfigFile("sample.yml")
 	if err != nil {
 		t.Error(err)
 	}
-
 	if cfg == nil {
 		t.Error("config is nil")
+	}
+
+	_, err = NewConfigFile("nonexistant")
+	if err == nil {
+		t.Error("expected error for non existant file")
+	}
+}
+
+func TestInvalidConfig(t *testing.T) {
+	_, err := NewConfig([]byte(`version: 1
+		adapters:
+		  flocker: http://flocker/flocker-adapter
+`))
+	if err == nil {
+		t.Error("expected error for invalid config file")
+	}
+	_, err = NewConfig([]byte(``))
+	if err == nil {
+		t.Error("expected error for invalid config file")
 	}
 }
 
@@ -68,7 +76,7 @@ func TestConfigParsing(t *testing.T) {
 	}
 }
 
-func TestEndpointParse(t *testing.T) {
+func TestEndpointMethodPatternParse(t *testing.T) {
 	cfg := newValidConfig()
 
 	for key, endpoint := range cfg.Endpoints {
@@ -84,6 +92,17 @@ func TestEndpointParse(t *testing.T) {
 			t.Errorf("expeted pattern: %s got pattern: %s", pattern, endpoint.Pattern)
 		}
 	}
+}
+
+func TestNoEndpoints(t *testing.T) {
+	cfg := newValidConfig()
+
+	cfg.Endpoints = nil
+
+	if errs := cfg.Parse(); errs == nil {
+		t.Error("expected error for missing endpoints")
+	}
+
 }
 
 func TestEndpointNoHooks(t *testing.T) {
