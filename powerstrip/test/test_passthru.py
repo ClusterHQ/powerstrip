@@ -28,6 +28,16 @@ def CompareDockerAndPowerstrip(test_case, cmd, usePTY=False,
     :param cmd: A shell command. E.g. ``echo ls | docker run -i ubuntu bash``.
         This command should include at least one call to Docker.
 
+    :param usePTY: Execute the given command with a pseudo-terminal, to
+        encourage Docker to feel comfortable writing out streaming responses (like
+        `docker pull` output) that are supposed to be consumed by a human.
+
+    :param expectDifferentResults: If True, then don't make an assertion in
+        here. Whether this is true or not, the raw responses from docker and
+        powerstrip are passed back to the caller as a tuple for further inspection
+        if they wish to make any additional assertions about the contents of the
+        results.
+
     :return: A ``Deferred`` which fires when the test has been completed.
     """
     DOCKER = b"unix:///var/run/docker.sock"
