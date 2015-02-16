@@ -228,9 +228,20 @@ adapters:
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
-            "docker rmi busybox; docker pull busybox", usePTY=True)
+            "docker rmi busybox; docker pull busybox", usePTY=True,
+            expectDifferentResults=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
+            # The outputs vary per test run due to e.g. download speed, but
+            # there should be some common themes...
+            text = ["Downloaded newer image for busybox",
+                    "Untagged",
+                    "Deleted",
+                    "Downloading",
+                    "Extracting"]
+            for textLine in text:
+                self.assertIn(textLine, powerstrip)
+                self.assertIn(textLine, docker)
         d.addCallback(assertions)
         return d
 
