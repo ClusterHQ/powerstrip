@@ -303,6 +303,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                         },
                     }), headers={'Content-Type': ['application/json']})
         # XXX Need to skip post-hooks for tar archives from e.g. docker export.
+        # https://github.com/ClusterHQ/powerstrip/issues/52
         for postHook in postHooks:
             hookURL = self.config.adapter_uri(postHook)
             d.addCallback(callPostHook, hookURL=hookURL)
