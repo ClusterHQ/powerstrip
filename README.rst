@@ -88,13 +88,13 @@ If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_
 
     $ sudo docker run -d --name powerstrip-slowreq \
                --expose 80 \
-               clusterhq/powerstrip-slowreq:v0.0.1
+               clusterhq/powerstrip-slowreq:v0.0.2
     $ sudo docker run -d --name powerstrip \
                -v /var/run/docker.sock:/var/run/docker.sock \
                -v $PWD/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
                -p 2375:2375 \
-               clusterhq/powerstrip:v0.0.1
+               clusterhq/powerstrip:v0.0.2
 
     # Note how the second command takes a second longer than the first.
     $ time sudo docker run ubuntu echo hello
@@ -311,6 +311,19 @@ Possible improvements
   For both pre and post-hooks.
 * Run all the hooks in case of an error condition, do give them a chance to unwind things.
 * Have an explicit "unwinder" hook-type for pre-hooks, to differentiate error-handling post-hooks from regular post-hooks.
+
+
+Changelog
+=========
+
+v0.0.2:
+
+* Add integration tests against real Docker for ``run``, ``build`` and ``pull``, fix various bugs exposed therein.
+* In particular, fix docker ``attach``, streaming responses when there are no post-hooks, GET requests, skip pre-hooks with ``application/tar`` handling.
+
+v0.0.1:
+
+* Initial release
 
 
 Additional Adapter Ideas
