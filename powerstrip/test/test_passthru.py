@@ -90,11 +90,14 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         """
         Test basic ``docker run`` functionality when there's a post-hook (the
         post-hook should get skipped).
+
+        Note that http://devnull/ should never be attempted because one
+        should always skip a post-hook when Docker responds with a hijacked
+        response type (`application/vnd.docker.raw-stream` as an example, such
+        as the TCP-stream hijacking that `docker attach` does). If the
+        implementation *does* attempt to connect to `devnull`, the test will
+        fail with a DNS lookup error. This could be made better.
         """
-        # Note that http://devnull/ should never be attempted because one
-        # should always skip a post-hook when Docker responds with a hijacked
-        # response type. If the implementation *does* attempt to connect to
-        # `devnull`, the test will fail with a DNS lookup error.
         self._configure("""
 endpoints:
   "POST /*/containers/*/attach":
