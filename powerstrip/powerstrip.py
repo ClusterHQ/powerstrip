@@ -43,6 +43,17 @@ class DockerProxyClient(proxy.ProxyClient):
             self._listener = None
             d.callback(result)
 
+    def setStreamingMode(self, streamingMode):
+        """
+        Allow anyone with a reference to us to toggle on/off streaming mode.
+        Useful when we have no post-hooks (and no indication from Docker that
+        it's sending packets of JSON e.g. with build) and we want to avoid
+        buffering slow responses in memory.
+        """
+        self._streaming = streamingMode
+        if streamingMode:
+            self._fireListener(Failure(NoPostHooks()))
+
     def registerListener(self, d):
         """
         Register a one shot listener, which can fire either with:
@@ -52,23 +63,30 @@ class DockerProxyClient(proxy.ProxyClient):
         """
         self._listener = d
 
+    def _handleRawStream(self):
+        """
+        Switch the current connection to be a "hijacked" aka raw stream: one
+        where bytes just get naively proxied back and forth.
+        """
+        def loseWriteConnectionReason(reason):
+            # discard the reason, for compatibility with readConnectionLost
+            self.transport.loseWriteConnection()
+        self.father.transport.readConnectionLost = loseWriteConnectionReason
+        directlyProvides(self.father.transport, IHalfCloseableProtocol)
+        self.http = False
+        self.father.transport.write(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/vnd.docker.raw-stream\r\n"
+            "\r\n")
+        def stdinHandler(data):
+            self.transport.write(data)
+        self.father.transport.protocol.dataReceived = stdinHandler
+        self.setStreamingMode(True)
+
     def handleHeader(self, key, value):
-        if key.lower() == "content-type" and value == "application/vnd.docker.raw-stream":
-            def loseWriteConnectionReason(reason):
-                # discard the reason, for compatibility with readConnectionLost
-                self.transport.loseWriteConnection()
-            self.father.transport.readConnectionLost = loseWriteConnectionReason
-            directlyProvides(self.father.transport, IHalfCloseableProtocol)
-            self.http = False
-            self.father.transport.write(
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: application/vnd.docker.raw-stream\r\n"
-                "\r\n")
-            self._streaming = True
-            self._fireListener(Failure(NoPostHooks()))
-        if key.lower() == "transfer-encoding" and value == "chunked":
-            self._streaming = True
-            self._fireListener(Failure(NoPostHooks()))
+        if (key.lower() == "content-type" and
+                value == "application/vnd.docker.raw-stream"):
+            self._handleRawStream()
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
@@ -141,6 +159,7 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
 class DockerProxy(proxy.ReverseProxyResource):
     proxyClientFactoryClass = DockerProxyClientFactory
 
+
     def __init__(self, dockerAddr=None, dockerPort=None, dockerSocket=None,
             path='', reactor=reactor, config=None):
         """
@@ -170,9 +189,14 @@ class DockerProxy(proxy.ReverseProxyResource):
     def render(self, request, reactor=reactor):
         # We are processing a leaf request.
         # Get the original request body from the client.
+        skipPreHooks = False
         if request.requestHeaders.getRawHeaders('content-type') == ["application/json"]:
             originalRequestBody = request.content.read()
             request.content.seek(0) # hee hee
+        elif request.requestHeaders.getRawHeaders('content-type') == ["application/tar"]:
+            # We can't JSON encode binary data, so don't even try.
+            skipPreHooks = True
+            originalRequestBody = None
         else:
             originalRequestBody = None
         preHooks = []
@@ -190,7 +214,6 @@ class DockerProxy(proxy.ReverseProxyResource):
                 newRequestBody = originalRequestBody
             else:
                 newRequestBody = result["ModifiedClientRequest"]["Body"]
-            # TODO also handle Method and Request
             return self.client.post(hookURL, json.dumps({
                         "PowerstripProtocolVersion": 1,
                         "Type": "pre-hook",
@@ -200,18 +223,23 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Body": newRequestBody,
                         }
                     }), headers={'Content-Type': ['application/json']})
-        for preHook in preHooks:
-            hookURL = self.config.adapter_uri(preHook)
-            d.addCallback(callPreHook, hookURL=hookURL)
-            d.addCallback(treq.json_content)
+        if not skipPreHooks:
+            for preHook in preHooks:
+                hookURL = self.config.adapter_uri(preHook)
+                d.addCallback(callPreHook, hookURL=hookURL)
+                d.addCallback(treq.json_content)
         def doneAllPrehooks(result):
             # Finally pass through the request to actual Docker.  For now we
             # mutate request in-place in such a way that ReverseProxyResource
             # understands it.
             if result is not None:
-                requestBody = result["ModifiedClientRequest"]["Body"].encode("utf-8")
+                requestBody = b""
+                bodyFromAdapter = result["ModifiedClientRequest"]["Body"]
+                if bodyFromAdapter is not None:
+                    requestBody = bodyFromAdapter.encode("utf-8")
                 request.content = StringIO.StringIO(requestBody)
-                request.requestHeaders.setRawHeaders(b"content-length", [str(len(requestBody))])
+                request.requestHeaders.setRawHeaders(b"content-length",
+                        [str(len(requestBody))])
             ###########################
             # The following code is copied from t.w.proxy.ReverseProxy so that
             # clientFactory reference can be kept.
@@ -227,9 +255,17 @@ class DockerProxy(proxy.ReverseProxyResource):
                 rest = self.path + '?' + qs
             else:
                 rest = self.path
+            allRequestHeaders = request.getAllHeaders()
+            if allRequestHeaders.get("transfer-encoding") == "chunked":
+                del allRequestHeaders["transfer-encoding"]
+            # XXX Streaming the contents of the request body into memory could
+            # cause OOM issues for large build contexts POSTed through
+            # powerstrip. See https://github.com/ClusterHQ/powerstrip/issues/51
+            body = request.content.read()
+            allRequestHeaders["content-length"] = str(len(body))
             clientFactory = self.proxyClientFactoryClass(
                 request.method, rest, request.clientproto,
-                request.getAllHeaders(), request.content.read(), request)
+                allRequestHeaders, body, request)
             ###########################
             if self.socket:
                 self.reactor.connectUNIX(self.socket, clientFactory)
@@ -240,12 +276,15 @@ class DockerProxy(proxy.ReverseProxyResource):
             return d
         d.addCallback(doneAllPrehooks)
         def inspect(client):
+            # If there are no post-hooks, allow the response to be streamed
+            # back to the client, rather than buffered.
             d = defer.Deferred()
             client.registerListener(d)
+            if not postHooks:
+                client.setStreamingMode(True)
             return d
         d.addCallback(inspect)
         def callPostHook(result, hookURL):
-            # TODO also handle Method and Request
             serverResponse = result["ModifiedServerResponse"]
             return self.client.post(hookURL, json.dumps({
                         # TODO Write tests for the information provided to the adapter.
@@ -262,6 +301,8 @@ class DockerProxy(proxy.ReverseProxyResource):
                             "Code": serverResponse["Code"],
                         },
                     }), headers={'Content-Type': ['application/json']})
+        # XXX Need to skip post-hooks for tar archives from e.g. docker export.
+        # https://github.com/ClusterHQ/powerstrip/issues/52
         for postHook in postHooks:
             hookURL = self.config.adapter_uri(postHook)
             d.addCallback(callPostHook, hookURL=hookURL)
