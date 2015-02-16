@@ -87,12 +87,6 @@ class DockerProxyClient(proxy.ProxyClient):
         if (key.lower() == "content-type" and
                 value == "application/vnd.docker.raw-stream"):
             self._handleRawStream()
-        # XXX Turns out, the build endpoint doesn't actually used chunked
-        # encoding. It just sends some JSON documents which maybe happen to
-        # line up with packet boundaries. So the following if statement is both
-        # untested and potentially never triggered in practice. :(
-        if key.lower() == "transfer-encoding" and value == "chunked":
-            self.setStreamingMode(True)
         return proxy.ProxyClient.handleHeader(self, key, value)
 
 
