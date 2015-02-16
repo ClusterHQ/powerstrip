@@ -91,6 +91,9 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         Test basic ``docker run`` functionality when there's a post-hook (the
         post-hook should get skipped).
 
+        Post-hooks are skipped on attach commands because they have streaming
+        (aka "hijacked") responses.
+
         Note that http://devnull/ should never be attempted because one
         should always skip a post-hook when Docker responds with a hijacked
         response type (`application/vnd.docker.raw-stream` as an example, such
