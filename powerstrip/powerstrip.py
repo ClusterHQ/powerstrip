@@ -256,8 +256,7 @@ class DockerProxy(proxy.ReverseProxyResource):
             else:
                 rest = self.path
             allRequestHeaders = request.getAllHeaders()
-            if ("transfer-encoding" in allRequestHeaders
-                    and allRequestHeaders["transfer-encoding"] == "chunked"):
+            if allRequestHeaders.get("transfer-encoding") == "chunked":
                 del allRequestHeaders["transfer-encoding"]
             # XXX Streaming the contents of the request body into memory could
             # cause OOM issues for large build contexts POSTed through
