@@ -261,7 +261,7 @@ class DockerProxy(proxy.ReverseProxyResource):
                 del allRequestHeaders["transfer-encoding"]
             # XXX Streaming the contents of the request body into memory could
             # cause OOM issues for large build contexts POSTed through
-            # powerstrip.
+            # powerstrip. See https://github.com/ClusterHQ/powerstrip/issues/51
             body = request.content.read()
             allRequestHeaders["content-length"] = str(len(body))
             clientFactory = self.proxyClientFactoryClass(
