@@ -228,20 +228,11 @@ adapters:
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
         d = CompareDockerAndPowerstrip(self,
-            "docker pull ubuntu", usePTY=True)
+            "docker rmi busybox; docker pull busybox", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
         d.addCallback(assertions)
         return d
-    test_run_docker_pull.skip = "only works when you are online"
-
-    def test_run_docker_pull_after_cleanup(self):
-        """
-        Test basic ``docker pull`` functionality after cleaning up any copies
-        of the image that already exist.
-        """
-        pass
-    test_run_docker_pull_after_cleanup.skip = "fill this in"
 
     def test_run_docker_build(self):
         """
