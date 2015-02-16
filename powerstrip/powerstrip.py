@@ -84,7 +84,6 @@ class DockerProxyClient(proxy.ProxyClient):
         self.setStreamingMode(True)
 
     def handleHeader(self, key, value):
-        # print key, "=>", value
         if (key.lower() == "content-type" and
                 value == "application/vnd.docker.raw-stream"):
             self._handleRawStream()
@@ -104,7 +103,6 @@ class DockerProxyClient(proxy.ProxyClient):
         if self._streaming:
             proxy.ProxyClient.handleResponsePart(self, buffer)
         else:
-            # print "BUFFER!", buffer
             self._responsePartBuffer += buffer
 
 
