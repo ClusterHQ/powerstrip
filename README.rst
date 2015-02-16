@@ -319,7 +319,7 @@ Changelog
 v0.0.2:
 
 * Add integration tests against real Docker for ``run``, ``build`` and ``pull``, fix various bugs exposed therein.
-* In particular, fix docker ``attach``, streaming responses when there are no post-hooks, GET requests, skip pre-hooks with ``application/tar`` handling.
+* In particular, fix docker ``attach``, streaming responses when there are no post-hooks, GET requests, skip pre-hooks with ``application/tar`` handling, stdin handling for ``attach``.
 
 v0.0.1:
 
