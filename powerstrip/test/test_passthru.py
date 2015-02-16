@@ -93,8 +93,15 @@ class BasicTests(TestCase, GenerallyUsefulPowerstripTestMixin):
         self._configure("endpoints: {}\nadapters: {}", dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
-        return CompareDockerAndPowerstrip(self,
+        d = CompareDockerAndPowerstrip(self,
             "docker run ubuntu echo hello")
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
+        d.addCallback(assertions)
+        return d
 
     def test_run_post_hook(self):
         """
@@ -121,8 +128,15 @@ adapters:
                 dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
-        return CompareDockerAndPowerstrip(self,
+        d = CompareDockerAndPowerstrip(self,
             "docker run ubuntu echo hello")
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
+        d.addCallback(assertions)
+        return d
 
     def test_run_post_hook_tty(self):
         """
@@ -139,8 +153,15 @@ adapters:
                 dockerOnSocket=True,
                 realDockerSocket="/var/run/docker.sock")
         self.config.read_and_parse()
-        return CompareDockerAndPowerstrip(self,
+        d = CompareDockerAndPowerstrip(self,
             "docker run -ti ubuntu echo hello", usePTY=True)
+        def assertions((powerstrip, docker)):
+            self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
+        d.addCallback(assertions)
+        return d
 
     def test_run_tty(self):
         """
@@ -154,6 +175,9 @@ adapters:
             "docker run -ti ubuntu echo hello", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
         d.addCallback(assertions)
         return d
 
@@ -214,6 +238,9 @@ adapters:
             "docker run -ti ubuntu echo hello", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
         d.addCallback(assertions)
         return d
 
@@ -231,6 +258,9 @@ adapters:
             "docker run -ti ubuntu echo hello", usePTY=True)
         def assertions((powerstrip, docker)):
             self.assertNotIn("fatal", docker)
+            self.assertNotIn("fatal", powerstrip)
+            self.assertIn("hello", docker)
+            self.assertIn("hello", powerstrip)
         d.addCallback(assertions)
         return d
 
