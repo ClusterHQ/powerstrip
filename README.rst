@@ -103,6 +103,13 @@ If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_
 **Warning:** Powerstrip exposes the Docker API unprotected on port 2375.
 Only use it in private, secure development environments.
 
+**Issues:** If you are using ``SELinux`` and having some issues, disable it or run the following commands:
+
+.. code:: sh
+
+    $ sudo grep docker /var/log/audit/audit.log | audit2allow -M mypol
+    $ sudo semodule -i mypol.pp
+
 Powerstrip adapters
 -------------------
 
