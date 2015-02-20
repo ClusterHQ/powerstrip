@@ -69,7 +69,7 @@ Powerstrip ships as a Docker image, and adapters can be any HTTP endpoint, inclu
 
 Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/docker.real.sock``, and to have ``/var/run`` on the host bind-mounted in at ``/host-var-run``.
 
-Reconfigure Docker in this way: for example on Ubuntu edit ``/etc/default/docker`` with ``-H unix:///var/run/docker.real.sock`` and then run ``sudo restart docker``.
+Reconfigure Docker in this way: for example on Ubuntu edit ``/etc/default/docker`` with ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo restart docker``.
 
 Powerstrip will then create ``/var/run/docker.sock`` from the host's perspective (``/host-var-run/docker.sock`` from inside its container) and normal Docker tools should carry on working as normal.
 
