@@ -1,4 +1,4 @@
-FROM gliderlabs/alpine
+FROM ubuntu
 COPY ./build/linux/powerstrip /bin/powerstrip
 ENV PORT 2375
 CMD ["/bin/powerstrip"]
