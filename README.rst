@@ -67,11 +67,17 @@ Try it out
 
 Powerstrip ships as a Docker image, and adapters can be any HTTP endpoint, including other linked Docker containers.
 
+Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/docker.real.sock``, and to have ``/var/run`` on the host bind-mounted in at ``/host-var-run``.
+
+Reconfigure Docker in this way: for example on Ubuntu edit ``/etc/default/docker`` with ``-H unix:///var/run/docker.real.sock`` and then run ``sudo restart docker``.
+
+Powerstrip will then create ``/var/run/docker.sock`` from the host's perspective (``/host-var-run/docker.sock`` from inside its container) and normal Docker tools should carry on working as normal.
+
 `Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip adapter (container) which adds a 1 second delay to all create commands.
 
-Try it out like this (assuming logged into an Ubuntu Docker host).
+If you are using ``boot2docker``, who knows. XXX ???
 
-If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_VERIFY``.
+Try it out like this (assuming logged into an Ubuntu Docker host).
 
 .. code:: sh
 
@@ -86,22 +92,21 @@ If you are using ``boot2docker``, drop the ``sudo`` and also unset ``DOCKER_TLS_
       slowreq: http://slowreq/slowreq-adapter
     EOF
 
-    $ sudo docker run -d --name powerstrip-slowreq \
+    $ sudo DOCKER_HOST="unix:///var/run/docker.real.sock" \
+           docker run -d --name powerstrip-slowreq \
                --expose 80 \
                clusterhq/powerstrip-slowreq:v0.0.1
-    $ sudo docker run -d --name powerstrip \
-               -v /var/run/docker.sock:/var/run/docker.sock \
+    $ sudo DOCKER_HOST="unix:///var/run/docker.real.sock" \
+           docker run -d --name powerstrip \
+               -v /var/run:/host-var-run \
                -v $PWD/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
-               -p 2375:2375 \
-               clusterhq/powerstrip:v0.0.1
+               clusterhq/powerstrip:unix-socket # XXX change this to v0.0.2 when releasing
 
     # Note how the second command takes a second longer than the first.
+    $ time sudo DOCKER_HOST="unix:///var/run/docker.sock.real" \
+                docker run ubuntu echo hello
     $ time sudo docker run ubuntu echo hello
-    $ time DOCKER_HOST=localhost:2375 docker run ubuntu echo hello
-
-**Warning:** Powerstrip exposes the Docker API unprotected on port 2375.
-Only use it in private, secure development environments.
 
 **Issues:** If you are using ``SELinux`` and having some issues, disable it or run the following commands:
 

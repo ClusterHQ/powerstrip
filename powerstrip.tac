@@ -11,7 +11,7 @@ DOCKER_HOST = os.environ.get('DOCKER_HOST')
 if DOCKER_HOST is None:
     # Default to assuming we've got a Docker socket bind-mounted into a
     # container we're running in.
-    DOCKER_HOST = "unix:///var/run/docker.sock"
+    DOCKER_HOST = "unix:///host-var-run/docker.real.sock"
 if "://" not in DOCKER_HOST:
     DOCKER_HOST = "tcp://" + DOCKER_HOST
 if DOCKER_HOST.startswith("tcp://"):
@@ -22,7 +22,10 @@ elif DOCKER_HOST.startswith("unix://"):
     socketPath = DOCKER_HOST[len("unix://"):]
     dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
 #logged = TrafficLoggingFactory(dockerAPI, "api-")
-dockerServer = internet.TCPServer(2375, dockerAPI, interface='0.0.0.0')
-dockerServer.setServiceParent(application)
 
-print r'export DOCKER_HOST=tcp://localhost:2375'
+# Refuse to listen on a TCP port, until
+# https://github.com/ClusterHQ/powerstrip/issues/56 is resolved.
+# TODO: maybe allow to specify a numberic Docker group (gid) as environment
+# variable, and also (optionally) the name of the socket file it creates...
+dockerServer = internet.UNIXServer("/host-var-run/docker.sock", dockerAPI, mode=0660)
+dockerServer.setServiceParent(application)
