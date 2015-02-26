@@ -308,8 +308,14 @@ class DockerProxy(proxy.ReverseProxyResource):
             d.addCallback(callPostHook, hookURL=hookURL)
             d.addCallback(treq.json_content)
         def sendFinalResponseToClient(result):
+            resultBody = result["ModifiedServerResponse"]["Body"].encode("utf-8")
+            # Update the Content-Length, since we're modifying the request object in-place.
+            request.responseHeaders.setRawHeaders(
+                b"content-length",
+                [str(len(resultBody))]
+            )
             # Write the final response to the client.
-            request.write(result["ModifiedServerResponse"]["Body"].encode("utf-8"))
+            request.write(resultBody)
             request.finish()
         d.addCallback(sendFinalResponseToClient)
         def squashNoPostHooks(failure):
