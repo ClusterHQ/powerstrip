@@ -112,7 +112,7 @@ Try it out like this (assuming logged into an Ubuntu Docker host).
     $ sudo DOCKER_HOST="unix:///var/run/docker.real.sock" \
            docker run -d --name powerstrip \
                -v /var/run:/host-var-run \
-               -v $PWD/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
+               -v ${PWD}/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
                clusterhq/powerstrip:unix-socket
 
