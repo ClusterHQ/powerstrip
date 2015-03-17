@@ -117,7 +117,7 @@ Try it out like this (assuming logged into an Ubuntu Docker host).
                clusterhq/powerstrip:unix-socket # XXX change this to v0.0.2 when releasing
 
     # Note how the second command takes a second longer than the first.
-    $ time sudo DOCKER_HOST="unix:///var/run/docker.sock.real" \
+    $ time sudo DOCKER_HOST="unix:///var/run/docker.real.sock" \
                 docker run ubuntu echo hello
     $ time sudo docker run ubuntu echo hello
 
