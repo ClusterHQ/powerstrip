@@ -203,6 +203,23 @@ adapters:
         d.addCallback(verify)
         return d
 
+    def test_content_length_post_hook(self):
+        """
+        When the content length is changed by a post-hook, test that powerstrip returns the
+        correct content as per the content-length
+        """
+        d = self._hookTest("""endpoints:
+  "POST %(dockerEndpoint)s":
+    pre: []
+    post: [adder,adder,adder,adder,adder,adder,adder,adder,adder]
+adapters:
+  adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s""", adderArgs=dict(post=True))
+        def verify(response):
+            self.assertEqual(response,
+                    {"Number": 10, "SeenByFakeDocker": 42})
+        d.addCallback(verify)
+        return d
+
     def test_adding_post_hook_twice_adapter(self):
         """
         Chaining post-hooks: adding twice means you get +2.
