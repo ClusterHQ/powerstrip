@@ -211,7 +211,7 @@ adapters:
         d = self._hookTest("""endpoints:
   "POST %(dockerEndpoint)s":
     pre: []
-    post: [adder,adder,adder,adder,adder,adder,adder,adder,adder,adder]
+    post: [adder,adder,adder,adder,adder,adder,adder,adder,adder]
 adapters:
   adder: http://127.0.0.1:%(adderPort)d%(adapterEndpoint)s""", adderArgs=dict(post=True))
         def verify(response):
