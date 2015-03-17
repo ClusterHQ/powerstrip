@@ -76,6 +76,11 @@ Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/dock
 
 For example, on Ubuntu, the default Docker options are found in ``/etc/default/docker`` which can be edited to say ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
 
+NOTE: If you are using ``boot2docker`` - you can use .. this gist: https://gist.github.com/binocarlos/e44b250616c8f07626d3 to reconfigure docker to listen to a different unix socket.
+
+/var/run volume
+---------------
+
 Powerstrip also expects to have a volume for ``/var/run`` on the host bind-mounted to ``/host-var-run`` in the container.
 
 Powerstrip will then create ``/var/run/docker.sock`` from the host's perspective (``/host-var-run/docker.sock`` from inside its container) and normal Docker tools should carry on working as normal.
@@ -84,8 +89,6 @@ Example Adapter
 ---------------
 
 `Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip adapter (container) which adds a 1 second delay to all create commands.
-
-If you are using ``boot2docker``, who knows. XXX ???
 
 Try it out like this (assuming logged into an Ubuntu Docker host).
 
