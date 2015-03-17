@@ -114,7 +114,7 @@ Try it out like this (assuming logged into an Ubuntu Docker host).
                -v /var/run:/host-var-run \
                -v $PWD/powerstrip-demo/adapters.yml:/etc/powerstrip/adapters.yml \
                --link powerstrip-slowreq:slowreq \
-               clusterhq/powerstrip:unix-socket # XXX change this to v0.0.2 when releasing
+               clusterhq/powerstrip:unix-socket
 
     # Note how the second command takes a second longer than the first.
     $ time sudo DOCKER_HOST="unix:///var/run/docker.real.sock" \
