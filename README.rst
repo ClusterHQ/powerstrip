@@ -74,7 +74,7 @@ Unix Socket
 
 Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/docker.real.sock``.  There are official instructions for doing that .. here: https://docs.docker.com/articles/basics/#bind-docker-to-another-hostport-or-a-unix-socket.
 
-For example on Ubuntu edit ``/etc/default/docker`` with ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
+For example, on Ubuntu, the default Docker options are found in ``/etc/default/docker`` which can be edited to say ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
 
 Powerstrip also expects to have a volume for ``/var/run`` on the host bind-mounted to ``/host-var-run`` in the container.
 
