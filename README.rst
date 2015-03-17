@@ -72,11 +72,16 @@ NOTE: **there are breaking changes in v0.0.2**
 Unix Socket
 -----------
 
-Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/docker.real.sock``, and to have ``/var/run`` on the host bind-mounted in at ``/host-var-run``.
+Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/docker.real.sock``.  There are official instructions for doing that .. here: https://docs.docker.com/articles/basics/#bind-docker-to-another-hostport-or-a-unix-socket.
 
-Reconfigure Docker in this way: for example on Ubuntu edit ``/etc/default/docker`` with ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
+For example on Ubuntu edit ``/etc/default/docker`` with ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
+
+Powerstrip also expects to have a volume for ``/var/run`` on the host bind-mounted to ``/host-var-run`` in the container.
 
 Powerstrip will then create ``/var/run/docker.sock`` from the host's perspective (``/host-var-run/docker.sock`` from inside its container) and normal Docker tools should carry on working as normal.
+
+Example Adapter
+---------------
 
 `Slowreq <https://github.com/clusterhq/powerstrip-slowreq>`_ is a trivial Powerstrip adapter (container) which adds a 1 second delay to all create commands.
 
