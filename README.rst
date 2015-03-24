@@ -76,7 +76,7 @@ Powerstrip expects Docker to have been reconfigured to listen on ``/var/run/dock
 
 For example, on Ubuntu, the default Docker options are found in ``/etc/default/docker`` which can be edited to say ``DOCKER_OPTS="-H unix:///var/run/docker.real.sock"`` and then run ``sudo service docker restart``.
 
-NOTE: If you are using ``boot2docker`` - you can use .. this gist: https://gist.github.com/binocarlos/e44b250616c8f07626d3 to reconfigure docker to listen to a different unix socket.
+NOTE: ``boot2docker`` and ``docker-machine`` are not currently supported.
 
 /var/run volume
 ---------------
