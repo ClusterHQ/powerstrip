@@ -358,6 +358,14 @@ Additional Adapter Ideas
 * A pre hook for containers => create that will inject ENV variables loaded from `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_
 * A post hook for containers => {start,stop} that will update `consul <https://github.com/hashicorp/consul>`_ or `etcd <https://github.com/coreos/etcd>`_ with the containers exposed endpoints
 
+Running Tests
+=============
+
+To run the test suite do the following commands:
+
+.. code::
+    sudo TEST_PASSTHRU=1 trial powerstrip.test
+
 License
 =======
 
