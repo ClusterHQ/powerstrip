@@ -2,7 +2,7 @@
 # -*- test-case-name: powerstrip.test.test_utils -*-
 
 from twisted.trial.unittest import TestCase
-from ..utils import GetDockerHost,GetDockerAPI
+from ..resources import GetDockerHost,GetDockerAPI
 
 """
 Tests for the utils.

@@ -25,21 +25,27 @@ class CreateContainerResource(BaseProxyResource):
 class DeleteContainerResource(BaseProxyResource):
     pass
 
-'''
-def GetDockerHost():
+def GetDockerHost(DOCKER_HOST=None):
     """
     Logic for getting the default value of DOCKER_HOST if its either not given or
     only partially given.
     The DOCKER_HOST must either start with tcp:// or unix://
     If no scheme is provided - we check for a leading slash to determine if its tcp or unix
+
+    it is normal to pass the ENV var DOCKER_HOST to this function:
+
+    dockerHost = GetDockerHost(os.environ.get('DOCKER_HOST'))
     """
-    DOCKER_HOST = os.environ.get('DOCKER_HOST')
+    
     if DOCKER_HOST is None:
         # Default to assuming we've got a Docker socket bind-mounted into a
         # container we're running in.
         DOCKER_HOST = "unix:///host-var-run/docker.real.sock"
     if "://" not in DOCKER_HOST:
-        DOCKER_HOST = "tcp://" + DOCKER_HOST
+        if DOCKER_HOST.startswith("/"):
+          DOCKER_HOST = "unix://" + DOCKER_HOST
+        else:
+          DOCKER_HOST = "tcp://" + DOCKER_HOST
     return DOCKER_HOST
 
 def GetDockerAPI(DOCKER_HOST):
@@ -54,4 +60,3 @@ def GetDockerAPI(DOCKER_HOST):
     elif DOCKER_HOST.startswith("unix://"):
         socketPath = DOCKER_HOST[len("unix://"):]
         dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
-'''
