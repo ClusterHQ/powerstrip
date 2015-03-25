@@ -30,3 +30,17 @@ class TestUtils(TestCase):
         """
         dockerHost = GetDockerHost('localhost:2375')
         self.assertEqual(dockerHost, "tcp://localhost:2375")
+
+    def test_get_path_based_docker_host_unchanged(self):
+        """
+        Check that if a path with no scheme is supplied then we get a unix socket
+        """
+        dockerHost = GetDockerHost('unix:///var/run/yobedisfileyo')
+        self.assertEqual(dockerHost, "unix:///var/run/yobedisfileyo")
+
+    def test_get_tcp_based_docker_host_unchanged(self):
+        """
+        Check that if a path with no scheme is supplied then we get a unix socket
+        """
+        dockerHost = GetDockerHost('tcp://127.0.0.1:2375')
+        self.assertEqual(dockerHost, "tcp://127.0.0.1:2375")
