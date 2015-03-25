@@ -4,9 +4,12 @@ from twisted.application import service, internet
 from urlparse import urlparse
 
 from powerstrip.powerstrip import ServerProtocolFactory
+#from powerstrip.tools import GetDockerHost,GetDockerAPI
 
 application = service.Application("Powerstrip")
 
+#DOCKER_HOST = GetDockerHost()
+#dockerAPI = GetDockerAPI(DOCKER_HOST)
 DOCKER_HOST = os.environ.get('DOCKER_HOST')
 if DOCKER_HOST is None:
     # Default to assuming we've got a Docker socket bind-mounted into a
