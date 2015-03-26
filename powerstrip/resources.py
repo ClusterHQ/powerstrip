@@ -54,8 +54,8 @@ def GetDockerAPICredentials(DOCKER_HOST="unix:///host-var-run/docker.real.sock")
     """
     if DOCKER_HOST.startswith("tcp://"):
         parsed = urlparse(DOCKER_HOST)
-        return dict(scheme="tcp", dockerAddr=parsed.hostname, dockerPort=parsed.port)
+        return dict(dockerAddr=parsed.hostname, dockerPort=parsed.port)
         #ServerProtocolFactory(**mydictionary)
     elif DOCKER_HOST.startswith("unix://"):
         socketPath = DOCKER_HOST[len("unix://"):]
-        return dict(scheme="unixsocket", dockerSocket=socketPath)
+        return dict(dockerSocket=socketPath)

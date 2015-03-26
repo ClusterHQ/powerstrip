@@ -55,7 +55,6 @@ class TestDockerAPICredentials(TestCase):
         dockerAPICredentials = GetDockerAPICredentials()
         
         self.assertEqual(dockerAPICredentials['dockerSocket'], "/host-var-run/docker.real.sock")
-        self.assertEqual(dockerAPICredentials['scheme'], "unixsocket")
         
         self.assertNotIn("dockerAddr", dockerAPICredentials)
         self.assertNotIn("dockerPort", dockerAPICredentials)
@@ -65,7 +64,6 @@ class TestDockerAPICredentials(TestCase):
         Test that if TCP is supplied we get the IP / port returned
         """
         dockerAPICredentials = GetDockerAPICredentials('tcp://127.0.0.1:2375')
-        self.assertEqual(dockerAPICredentials['scheme'], "tcp")
         
         self.assertEqual(dockerAPICredentials['dockerAddr'], "127.0.0.1")
         self.assertEqual(dockerAPICredentials['dockerPort'], 2375)
@@ -76,7 +74,6 @@ class TestDockerAPICredentials(TestCase):
         Test that if UNIX is supplied
         """
         dockerAPICredentials = GetDockerAPICredentials('unix:///var/run/yobedisfileyo')
-        self.assertEqual(dockerAPICredentials['scheme'], "unixsocket")
         
         self.assertEqual(dockerAPICredentials['dockerSocket'], "/var/run/yobedisfileyo")
         self.assertNotIn("dockerAddr", dockerAPICredentials)
