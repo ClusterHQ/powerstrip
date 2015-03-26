@@ -48,15 +48,14 @@ def GetDockerHost(DOCKER_HOST=None):
           DOCKER_HOST = "tcp://" + DOCKER_HOST
     return DOCKER_HOST
 
-def GetDockerAPI(DOCKER_HOST):
+def GetDockerAPICredentials(DOCKER_HOST="unix:///host-var-run/docker.real.sock"):
     """
-    Logic for getting a ServerProtocolFactory based on either the dockerAddr or dockerSocket
-    which in turn depends on the scheme of the DOCKER_HOST  
+    Logic for getting the arguments to be passed to a ServerProtocolFactory based on the DOCKER_HOST  
     """
     if DOCKER_HOST.startswith("tcp://"):
         parsed = urlparse(DOCKER_HOST)
-        dockerAPI = ServerProtocolFactory(dockerAddr=parsed.hostname,
-            dockerPort=parsed.port)
+        return dict(scheme="tcp", dockerAddr=parsed.hostname, dockerPort=parsed.port)
+        #ServerProtocolFactory(**mydictionary)
     elif DOCKER_HOST.startswith("unix://"):
         socketPath = DOCKER_HOST[len("unix://"):]
-        dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
+        return dict(scheme="unixsocket", dockerSocket=socketPath)
