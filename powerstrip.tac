@@ -1,34 +1,34 @@
 import os
+import sys
 from twisted.application import service, internet
 #from twisted.protocols.policies import TrafficLoggingFactory
-from urlparse import urlparse
 
 from powerstrip.powerstrip import ServerProtocolFactory
 #from powerstrip.tools import GetDockerHost,GetDockerAPI
 
+TARGET_DOCKER_SOCKET = "/host-var-run/docker.sock"
+
 application = service.Application("Powerstrip")
 
-#DOCKER_HOST = GetDockerHost()
-#dockerAPI = GetDockerAPI(DOCKER_HOST)
-DOCKER_HOST = os.environ.get('DOCKER_HOST')
-if DOCKER_HOST is None:
-    # Default to assuming we've got a Docker socket bind-mounted into a
-    # container we're running in.
-    DOCKER_HOST = "unix:///host-var-run/docker.real.sock"
-if "://" not in DOCKER_HOST:
-    DOCKER_HOST = "tcp://" + DOCKER_HOST
-if DOCKER_HOST.startswith("tcp://"):
-    parsed = urlparse(DOCKER_HOST)
-    dockerAPI = ServerProtocolFactory(dockerAddr=parsed.hostname,
-        dockerPort=parsed.port)
-elif DOCKER_HOST.startswith("unix://"):
-    socketPath = DOCKER_HOST[len("unix://"):]
-    dockerAPI = ServerProtocolFactory(dockerSocket=socketPath)
-#logged = TrafficLoggingFactory(dockerAPI, "api-")
+# we create a connection to the Docker server based on DOCKER_HOST (can be tcp or unix socket)
+DOCKER_HOST = GetDockerHost(os.environ.get('DOCKER_HOST'))
+dockerAPICredentials = GetDockerAPICredentials(DOCKER_HOST)
 
-# Refuse to listen on a TCP port, until
-# https://github.com/ClusterHQ/powerstrip/issues/56 is resolved.
-# TODO: maybe allow to specify a numberic Docker group (gid) as environment
-# variable, and also (optionally) the name of the socket file it creates...
-dockerServer = internet.UNIXServer("/host-var-run/docker.sock", dockerAPI, mode=0660)
+# check that /var/run is mounted from the host (so we can write docker.sock to it)
+if !os.path.isdir("/host-var-run"):
+  print("/var/run must be mounted as /host-var-run in the powerstrip container", file=sys.stderr)
+  sys.exit(1)
+
+# check that the docker unix socket that we are trying to connect to actually exists
+if dockerAPICredentials['scheme'] == "unixsocket" && os.path.exists(dockerAPICredentials["dockerSocket"]):
+  print(dockerAPICredentials["dockerSocket"] + " does not exist as a docker unix socket to connect to", file=sys.stderr)
+  sys.exit(1)
+
+# check that the unix socket we want to listen on does not already exist
+if os.path.exists(TARGET_DOCKER_SOCKET):
+  print(TARGET_DOCKER_SOCKET + " already exists - we want to listen on this path", file=sys.stderr)
+  sys.exit(1)
+
+dockerAPI = ServerProtocolFactory(**dockerAPICredentials)
+dockerServer = internet.UNIXServer(TARGET_DOCKER_SOCKET, dockerAPI, mode=0660)
 dockerServer.setServiceParent(application)
