@@ -78,6 +78,17 @@ For example, on Ubuntu, the default Docker options are found in ``/etc/default/d
 
 NOTE: ``boot2docker`` and ``docker-machine`` are not currently supported.
 
+socat
+-----
+
+Because powerstrip listens on a Unix Socket (since v0.0.2) - it means that the HTTP api is not exposed over the network.  If you need powerstrip to listen on a TCP socket - you can use something like socat.  However - it must be noted that it does not work if you run socat inside a container (which is the reason that powerstrip no longers offers an option to listen on a TCP port).
+
+Here is an example of a socat command that will forward traffic on port 2375 to the `/var/run/docker.sock` that powerstrip is listening to:
+
+```bash
+$ socat TCP-LISTEN:2375,reuseaddr,fork UNIX-CLIENT:/var/run/docker.sock
+```
+
 /var/run volume
 ---------------
 
@@ -345,6 +356,7 @@ v0.0.2:
 
 * Add integration tests against real Docker for ``run``, ``build`` and ``pull``, fix various bugs exposed therein.
 * In particular, fix docker ``attach``, streaming responses when there are no post-hooks, GET requests, skip pre-hooks with ``application/tar`` handling, stdin handling for ``attach``.
+* Powerstrip now listens on a Unix Socket and not TCP - this is to get around proxy problems when using a Docker container to foward the TCP traffic
 
 v0.0.1:
 
