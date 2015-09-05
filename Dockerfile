@@ -9,7 +9,7 @@ RUN         apt-get -qy update
 RUN         apt-get -qy upgrade
 RUN         apt-get -qy install python-pip
 RUN         apt-get -qy install python-dev
-RUN         apt-get -qy install python-pyasn1
+RUN         pip install pyasn1
 RUN         apt-get -qy install libyaml-dev
 RUN         apt-get -qy install libffi-dev
 RUN         apt-get -qy install libssl-dev

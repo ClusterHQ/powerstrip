@@ -154,6 +154,9 @@ class DockerProxyClientFactory(proxy.ProxyClientFactory):
         self._fireListener(client)
         return client
 
+    def clientConnectionFailed(self, connector, reason):
+       connector.connect()
+
 
 
 class DockerProxy(proxy.ReverseProxyResource):
