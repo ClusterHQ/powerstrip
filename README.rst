@@ -6,7 +6,7 @@ This is now the preferred way to extend Docker's functionality with third-party 
 
 Powerstrip is now deprecated, and no longer under development by ClusterHQ, however we will continue to review and merge patches submitted by the community.
 
-The `goals of Powerstrip <https://github.com/ClusterHQ/powerstrip#goal-of-project>`_ have been thoroughly achieved, and we would like to thank everyone at Docker who contributed to the Docker extensions projects.
+The `goals of Powerstrip <https://github.com/ClusterHQ/powerstrip#goal-of-project>`_ have been achieved, and we would like to thank everyone at Docker and the wider ecosystem who contributed to the Docker extensions projects.
 
 
 
