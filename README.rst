@@ -1,3 +1,18 @@
+IMPORTANT: THIS TOOL IS DEPRECATED
+==================================
+
+In `Docker 1.8 <https://github.com/docker/docker/blob/master/CHANGELOG.md#180-2015-08-11>`_ the Docker Engine gained support for `volume drivers <https://docs.docker.com/engine/extend/plugins_volume/>`_, and networking drivers followed in `Docker 1.9 <https://github.com/docker/docker/blob/master/CHANGELOG.md#190-2015-11-03>`_.
+This is now the preferred way to extend Docker's functionality with third-party plugins.
+
+Powerstrip is now deprecated, and no longer under development by ClusterHQ, however we will continue to review and merge patches submitted by the community.
+
+The `goals of Powerstrip <https://github.com/ClusterHQ/powerstrip#goal-of-project>`_ have been achieved, and we would like to thank everyone at Docker and the wider ecosystem who contributed to the Docker extensions projects.
+
+
+
+
+
+
 Powerstrip: A tool for prototyping Docker extensions
 ====================================================
 
